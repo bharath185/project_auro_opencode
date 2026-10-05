@@ -151,9 +151,9 @@ function boardRoutes(streamlinedUiEnabled: boolean) {
   return (
     <>
       <Route index element={<Navigate to="governance" replace />} />
-      <Route path="dashboard" element={<Navigate to="/governance" replace />} />
+      <Route path="dashboard" element={<Navigate to="governance" replace />} />
       <Route path="about" element={<AboutPage />} />
-      <Route path="dashboard/live" element={<Navigate to="/governance" replace />} />
+      <Route path="dashboard/live" element={<Navigate to="governance" replace />} />
       <Route
         path="timeline"
         element={streamlinedUiEnabled ? <AuditCompatibilityRedirect to="/activity/timeline" /> : <Timeline />}
@@ -381,7 +381,7 @@ function boardRoutes(streamlinedUiEnabled: boolean) {
       <Route path="goals" element={<Goals />} />
       <Route path="goals/:goalId" element={<GoalDetail />} />
       <Route path="governance" element={<Governance />} />
-      <Route path="sales" element={<Navigate to="/governance" replace />} />
+      <Route path="sales" element={<Navigate to="governance" replace />} />
       <Route path="artifacts" element={<Artifacts />} />
       <Route path="approvals" element={<Approvals />} />
       <Route path="approvals/pending" element={<Approvals />} />
