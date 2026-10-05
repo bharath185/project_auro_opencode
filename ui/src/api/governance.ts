@@ -7,6 +7,8 @@ export interface GovernanceAgentSummary {
   title: string | null;
   reportsTo: string | null;
   budgetMonthlyCents: number;
+  adapterType?: string;
+  adapterConfig?: any;
 }
 
 export interface GovernanceOrgStatus {
@@ -185,6 +187,21 @@ export const governanceApi = {
 
   getExportUrl: (companyId: string, format: string) =>
     `/api/companies/${companyId}/governance/export/${format}`,
+
+  getZipExportUrl: (companyId: string) =>
+    `/api/companies/${companyId}/governance/export/zip`,
+
+  getJiraExportUrl: (companyId: string) =>
+    `/api/companies/${companyId}/governance/export/jira`,
+
+  getXlsxExportUrl: (companyId: string) =>
+    `/api/companies/${companyId}/governance/export/xlsx`,
+
+  getMarkdownExportUrl: (companyId: string) =>
+    `/api/companies/${companyId}/governance/export/markdown`,
+
+  getPdfExportUrl: (companyId: string) =>
+    `/api/companies/${companyId}/governance/export/pdf`,
 
   getTeamState: (companyId: string) =>
     api.get<{

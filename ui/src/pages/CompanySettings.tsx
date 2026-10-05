@@ -11,35 +11,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import {
   SlidersHorizontal,
-  Mail,
-  ShieldCheck,
   Building2,
-  KeyRound,
   CheckCircle2,
   Sparkles,
   Save,
   Cpu,
-  Bot,
-  Zap,
+  ShieldCheck,
+  FolderKanban,
+  FileCode,
+  Users,
 } from "lucide-react";
 import { CompanyPatternIcon } from "../components/CompanyPatternIcon";
 import { Field } from "../components/agent-config-primitives";
 
 const GEMINI_MODELS = [
   { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Fast & High Intelligence - Recommended)" },
-  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Deep Reasoning & Complex Workflows)" },
+  { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Deep Reasoning & Architecture Planning)" },
   { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Ultra-Low Latency)" },
 ];
 
 const OPENCODE_MODELS = [
-  { id: "opencode/deepseek-v4-flash", label: "OpenCode DeepSeek V4 Flash (Fast - Recommended)" },
-  { id: "opencode/deepseek-v4-reasoning", label: "OpenCode DeepSeek V4 Reasoning (Deep Logic)" },
-  { id: "opencode/qwen-2.5-coder-32b", label: "OpenCode Qwen 2.5 Coder (Code & Workflows)" },
+  { id: "opencode/deepseek-v4-pro", label: "OpenCode DeepSeek V4 Pro (Complex Reasoning - Recommended)" },
+  { id: "opencode/deepseek-v4-flash", label: "OpenCode DeepSeek V4 Flash (High Speed Execution)" },
+  { id: "opencode/kimi-k2.7-code", label: "OpenCode Kimi K2.7 Code (Architecture & OpenAPI)" },
 ];
 
 export function CompanySettings() {
   const {
-    companies,
     selectedCompany,
     selectedCompanyId,
   } = useCompany();
@@ -51,24 +49,19 @@ export function CompanySettings() {
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
 
-  // Sender identity local state
-  const [senderName, setSenderName] = useState(() => localStorage.getItem("auro_sender_name") || "Sales Lead");
-  const [senderEmail, setSenderEmail] = useState(() => localStorage.getItem("auro_sender_email") || "sales@auro.ai");
-  const [legalBusinessName, setLegalBusinessName] = useState(() => localStorage.getItem("auro_legal_name") || "Auro Outbound Inc.");
-  const [physicalAddress, setPhysicalAddress] = useState(() => localStorage.getItem("auro_physical_address") || "100 Innovation Blvd, Suite 200, Tech Park");
+  // Governance Defaults
+  const [leadArchitectName, setLeadArchitectName] = useState(() => localStorage.getItem("auro_lead_architect") || "Senior Principal Architect");
+  const [defaultSprintWeeks, setDefaultSprintWeeks] = useState(() => localStorage.getItem("auro_sprint_weeks") || "2");
+  const [defaultTestingStrategy, setDefaultTestingStrategy] = useState(() => localStorage.getItem("auro_qa_strategy") || "Automated Unit + E2E + Contract Tests");
 
   // AI Provider local state
   const [aiProvider, setAiProvider] = useState<"gemini" | "opencode">(() => (localStorage.getItem("auro_ai_provider") as "gemini" | "opencode") || "gemini");
   const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem("auro_gemini_key") || "");
   const [geminiModel, setGeminiModel] = useState(() => localStorage.getItem("auro_gemini_model") || "gemini-2.5-flash");
   const [openCodeApiKey, setOpenCodeApiKey] = useState(() => localStorage.getItem("auro_opencode_key") || "");
-  const [openCodeModel, setOpenCodeModel] = useState(() => localStorage.getItem("auro_opencode_model") || "opencode/deepseek-v4-flash");
+  const [openCodeModel, setOpenCodeModel] = useState(() => localStorage.getItem("auro_opencode_model") || "opencode/deepseek-v4-pro");
   const [applyToAgents, setApplyToAgents] = useState(true);
   const [isUpdatingAgents, setIsUpdatingAgents] = useState(false);
-
-  // CRM settings local state
-  const [webhookUrl, setWebhookUrl] = useState(() => localStorage.getItem("auro_crm_webhook") || "https://api.hubspot.com/crm/v3/imports");
-  const [hubspotKey, setHubspotKey] = useState(() => localStorage.getItem("auro_hubspot_key") || "pat-na1-••••••••••••••••");
   const [savedNotice, setSavedNotice] = useState(false);
 
   // Sync local state from selected company
@@ -81,8 +74,8 @@ export function CompanySettings() {
 
   useEffect(() => {
     setBreadcrumbs([
-      { label: "Sales Hub", href: "/sales" },
-      { label: "Settings & Configuration" }
+      { label: "Governance Hub", href: "/governance" },
+      { label: "Settings & AI Configuration" }
     ]);
   }, [setBreadcrumbs]);
 
@@ -112,13 +105,9 @@ export function CompanySettings() {
   });
 
   const handleSaveAll = async () => {
-    // Save to local storage for persistence across sales operations
-    localStorage.setItem("auro_sender_name", senderName);
-    localStorage.setItem("auro_sender_email", senderEmail);
-    localStorage.setItem("auro_legal_name", legalBusinessName);
-    localStorage.setItem("auro_physical_address", physicalAddress);
-    localStorage.setItem("auro_crm_webhook", webhookUrl);
-    localStorage.setItem("auro_hubspot_key", hubspotKey);
+    localStorage.setItem("auro_lead_architect", leadArchitectName);
+    localStorage.setItem("auro_sprint_weeks", defaultSprintWeeks);
+    localStorage.setItem("auro_qa_strategy", defaultTestingStrategy);
 
     localStorage.setItem("auro_ai_provider", aiProvider);
     localStorage.setItem("auro_gemini_key", geminiApiKey);
@@ -161,7 +150,7 @@ export function CompanySettings() {
             )
           )
         );
-        void queryClient.invalidateQueries({ queryKey: queryKeys.agents.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.agents.list(selectedCompanyId) });
       } catch (err) {
         console.error("Failed to propagate AI provider settings to agents:", err);
       } finally {
@@ -188,10 +177,10 @@ export function CompanySettings() {
         <div>
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Sales &amp; Outbound Settings</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Governance &amp; AI Engine Settings</h1>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Configure required legal sender identity, AI provider models, and CRM synchronization.
+            Configure organization identity, C-suite AI model routing, and engineering standards.
           </p>
         </div>
 
@@ -203,87 +192,90 @@ export function CompanySettings() {
       {savedNotice && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-foreground font-medium animate-in fade-in">
           <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-          Settings saved successfully. Sender identity, AI engine ({aiProvider === "gemini" ? "Google Gemini" : "OpenCode"}), and CRM settings updated.
+          Settings saved successfully. C-suite agent models ({aiProvider === "gemini" ? "Google Gemini" : "OpenCode"}) updated.
         </div>
       )}
 
-      {/* 1. Sender Identity (Required for Outbound) */}
+      {/* 1. General Organization Profile */}
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm font-semibold">Sender Identity &amp; Legal Compliance</CardTitle>
+              <Building2 className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-semibold">Organization Profile &amp; Control Plane</CardTitle>
             </div>
             <Badge variant="secondary" className="bg-primary/15 text-primary border-primary/20 text-xs">
-              RFC 8058 &amp; CAN-SPAM Required
+              AURO Instance
             </Badge>
           </div>
           <CardDescription className="text-xs text-muted-foreground">
-            These credentials are automatically rendered in cold email sequence footers with one-click unsubscribe headers.
+            Display name and description for this Project Auro governance control plane.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Sender Name" hint="Display name of the person sending outbound emails.">
+            <Field label="Organization Name" hint="Corporate or workspace title.">
               <input
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
                 type="text"
-                value={senderName}
-                onChange={(e) => setSenderName(e.target.value)}
-                placeholder="e.g. John Doe"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="e.g. Project Auro Governance"
               />
             </Field>
 
-            <Field label="Sender Email" hint="Verified sending email address or mailbox.">
+            <Field label="Description" hint="Scope or executive charter.">
               <input
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                type="email"
-                value={senderEmail}
-                onChange={(e) => setSenderEmail(e.target.value)}
-                placeholder="e.g. john@company.com"
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. Autonomous C-Suite Engineering Control Plane"
               />
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Legal Business Name" hint="Official registered entity name.">
-              <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                type="text"
-                value={legalBusinessName}
-                onChange={(e) => setLegalBusinessName(e.target.value)}
-                placeholder="e.g. Acme Corp Inc."
-              />
-            </Field>
-
-            <Field label="Physical Postal Address" hint="Mailing address required for CAN-SPAM compliance.">
-              <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                type="text"
-                value={physicalAddress}
-                onChange={(e) => setPhysicalAddress(e.target.value)}
-                placeholder="e.g. 100 Tech Park, Suite 400, San Francisco, CA"
-              />
-            </Field>
+          <div className="flex items-center gap-4 pt-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-muted/40">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="h-full w-full object-contain rounded-lg" />
+              ) : (
+                <CompanyPatternIcon companyName={selectedCompany.name} logoUrl={logoUrl} className="h-7 w-7" />
+              )}
+            </div>
+            <div>
+              <label className="cursor-pointer text-xs font-medium text-primary hover:underline">
+                Upload Custom Logo
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) logoUploadMutation.mutate(file);
+                  }}
+                />
+              </label>
+              <p className="text-(length:--text-micro) text-muted-foreground mt-0.5">PNG, JPG, or SVG up to 2MB</p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* 2. AI Provider (Gemini & OpenCode Only) */}
+      {/* 2. AI Intelligence Engine (Gemini & OpenCode) */}
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm font-semibold">AI Intelligence Engine</CardTitle>
+              <CardTitle className="text-sm font-semibold">C-Suite AI Intelligence Engine</CardTitle>
             </div>
             <Badge variant="secondary" className="bg-primary/15 text-primary border-primary/20 text-xs">
               Gemini &amp; OpenCode Supported
             </Badge>
           </div>
           <CardDescription className="text-xs text-muted-foreground">
-            Configure the primary AI harness and models for lead qualification, copywriting, and autonomous research.
+            Configure the underlying foundation model for CEO, CTO, Product Manager, Lead Architect, QA, DevOps, and Security agents.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -298,22 +290,14 @@ export function CompanySettings() {
                   : "border-border bg-card hover:border-border/80 hover:bg-muted/40"
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-primary/20 text-primary">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">Google Gemini</div>
-                    <div className="text-xs text-muted-foreground">Gemini 2.5 Flash / Pro Multimodal</div>
-                  </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-medium text-xs text-foreground">
+                  <Cpu className="h-4 w-4 text-primary" /> Google Gemini (Official)
                 </div>
-                {aiProvider === "gemini" && (
-                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                )}
+                {aiProvider === "gemini" && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
               </div>
-              <p className="text-xs text-muted-foreground">
-                High-speed multimodal intelligence with large context windows for thorough lead analysis.
+              <p className="text-(length:--text-micro) text-muted-foreground leading-relaxed">
+                Native multi-modal intelligence with deep contextual grounding and ultra-fast generation.
               </p>
             </div>
 
@@ -326,185 +310,140 @@ export function CompanySettings() {
                   : "border-border bg-card hover:border-border/80 hover:bg-muted/40"
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-primary/20 text-primary">
-                    <Zap className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">OpenCode</div>
-                    <div className="text-xs text-muted-foreground">OpenRouter / DeepSeek Engine</div>
-                  </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-medium text-xs text-foreground">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> OpenCode / DeepSeek
                 </div>
-                {aiProvider === "opencode" && (
-                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                )}
+                {aiProvider === "opencode" && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Open-weights and specialized reasoning models for autonomous execution and coding tasks.
+              <p className="text-(length:--text-micro) text-muted-foreground leading-relaxed">
+                Advanced reasoning models optimized for software architecture, OpenAPI specs, and test planning.
               </p>
             </div>
           </div>
 
-          {/* Provider Details Configuration */}
-          {aiProvider === "gemini" ? (
-            <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-4">
-              <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-primary" /> Google Gemini Configuration
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Gemini API Key" hint="Your Google AI Studio API key (GEMINI_API_KEY).">
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary font-mono"
-                    type="password"
-                    value={geminiApiKey}
-                    onChange={(e) => setGeminiApiKey(e.target.value)}
-                    placeholder="AIzaSy••••••••••••••••••••••••"
-                  />
-                </Field>
+          {/* Gemini Config Fields */}
+          {aiProvider === "gemini" && (
+            <div className="space-y-3 pt-2 border-t border-border">
+              <Field label="Gemini API Key" hint="Google AI Studio or Vertex API key.">
+                <input
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
+                  type="password"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  placeholder="AIzaSy••••••••••••••••"
+                />
+              </Field>
 
-                <Field label="Default Model" hint="Recommended model for outbound agent operations.">
-                  <select
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                    value={geminiModel}
-                    onChange={(e) => setGeminiModel(e.target.value)}
-                  >
-                    {GEMINI_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-4">
-              <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Zap className="h-3.5 w-3.5 text-primary" /> OpenCode / OpenRouter Configuration
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="OpenCode / OpenRouter API Key" hint="Your OpenRouter or OpenCode endpoint API key.">
-                  <input
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary font-mono"
-                    type="password"
-                    value={openCodeApiKey}
-                    onChange={(e) => setOpenCodeApiKey(e.target.value)}
-                    placeholder="sk-or-v1-••••••••••••••••••••••••"
-                  />
-                </Field>
-
-                <Field label="Default Model" hint="Model endpoint for OpenCode execution.">
-                  <select
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                    value={openCodeModel}
-                    onChange={(e) => setOpenCodeModel(e.target.value)}
-                  >
-                    {OPENCODE_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
+              <Field label="Primary Gemini Model" hint="Default model routed to C-suite agents for document generation.">
+                <select
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                  value={geminiModel}
+                  onChange={(e) => setGeminiModel(e.target.value)}
+                >
+                  {GEMINI_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              </Field>
             </div>
           )}
 
-          {/* Sync Option */}
-          <div className="flex items-center gap-2 pt-1">
+          {/* OpenCode Config Fields */}
+          {aiProvider === "opencode" && (
+            <div className="space-y-3 pt-2 border-t border-border">
+              <Field label="OpenCode Gateway API Key (Optional)" hint="Optional bearer key if using private gateway.">
+                <input
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
+                  type="password"
+                  value={openCodeApiKey}
+                  onChange={(e) => setOpenCodeApiKey(e.target.value)}
+                  placeholder="sk-••••••••••••••••"
+                />
+              </Field>
+
+              <Field label="Primary OpenCode Model" hint="Reasoning model for architectural docs and risk assessment.">
+                <select
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                  value={openCodeModel}
+                  onChange={(e) => setOpenCodeModel(e.target.value)}
+                >
+                  {OPENCODE_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          )}
+
+          <div className="pt-2 flex items-center gap-2">
             <input
               type="checkbox"
-              id="apply-to-agents"
+              id="applyAgents"
               checked={applyToAgents}
               onChange={(e) => setApplyToAgents(e.target.checked)}
-              className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
             />
-            <label htmlFor="apply-to-agents" className="text-xs text-foreground cursor-pointer select-none">
-              Automatically apply selected AI provider ({aiProvider === "gemini" ? "Google Gemini" : "OpenCode"}) to all active agents in this organization
+            <label htmlFor="applyAgents" className="text-xs text-foreground font-medium cursor-pointer">
+              Automatically synchronize this model across all 6 C-Suite agents (CEO, CTO, PM, QA, DevOps, Security)
             </label>
           </div>
         </CardContent>
       </Card>
 
-      {/* 3. CRM Integrations */}
+      {/* 3. Engineering & Governance Standards */}
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm font-semibold">CRM &amp; Lead Webhooks</CardTitle>
+              <FolderKanban className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-semibold">Governance &amp; Sprint Execution Standards</CardTitle>
             </div>
-            <Badge variant="secondary" className="text-xs">
-              AES-256 Encrypted
+            <Badge variant="secondary" className="bg-primary/15 text-primary border-primary/20 text-xs">
+              Project Defaults
             </Badge>
           </div>
           <CardDescription className="text-xs text-muted-foreground">
-            Automatically export approved leads and hot responses directly to your CRM.
+            Baseline parameters injected into generated documents and sprint breakdown artifacts.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="CRM Webhook Endpoint" hint="Webhook URL for pushing leads in real time.">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Field label="Lead Architect Title" hint="Sign-off title for architecture specs.">
               <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary font-mono"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
                 type="text"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                placeholder="https://hooks.zapier.com/hooks/catch/..."
+                value={leadArchitectName}
+                onChange={(e) => setLeadArchitectName(e.target.value)}
+                placeholder="e.g. Principal Architect"
               />
             </Field>
 
-            <Field label="HubSpot Private App Token" hint="Token used for direct CRM deal and contact sync.">
+            <Field label="Default Sprint Cadence" hint="Sprint cycle duration in weeks.">
+              <select
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                value={defaultSprintWeeks}
+                onChange={(e) => setDefaultSprintWeeks(e.target.value)}
+              >
+                <option value="1">1 Week Sprints</option>
+                <option value="2">2 Weeks Sprints (Standard)</option>
+                <option value="3">3 Weeks Sprints</option>
+                <option value="4">4 Weeks Sprints (Monthly)</option>
+              </select>
+            </Field>
+
+            <Field label="QA Test Gate Policy" hint="Test coverage baseline requirement.">
               <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary font-mono"
-                type="password"
-                value={hubspotKey}
-                onChange={(e) => setHubspotKey(e.target.value)}
-                placeholder="pat-na1-xxxxxxxx-xxxx"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                type="text"
+                value={defaultTestingStrategy}
+                onChange={(e) => setDefaultTestingStrategy(e.target.value)}
+                placeholder="e.g. 85%+ Unit & E2E Coverage"
               />
             </Field>
           </div>
         </CardContent>
       </Card>
-
-      {/* 4. Organization Details */}
-      <Card className="border-border bg-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Organization Profile</CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
-            Display name and branding for this sales instance.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Organization Name" hint="Display name for this workspace.">
-              <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-              />
-            </Field>
-
-            <Field label="Description" hint="Workspace purpose.">
-              <input
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Outbound Sales & Growth"
-              />
-            </Field>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end pt-2">
-        <Button size="sm" onClick={handleSaveAll} className="text-xs">
-          <Save className="mr-1.5 h-3.5 w-3.5" /> Save Changes
-        </Button>
-      </div>
     </div>
   );
 }

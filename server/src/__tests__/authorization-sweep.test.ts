@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 import { governanceRoutes } from "../routes/governance.js";
-import { salesRoutes } from "../routes/sales.js";
 import { errorHandler } from "../middleware/index.js";
 
 describe("Authorization Sweep & Cross-Company IDOR Matrix Tests", () => {
@@ -18,8 +17,8 @@ describe("Authorization Sweep & Cross-Company IDOR Matrix Tests", () => {
     authorizedApp = express();
     authorizedApp.use(express.json());
     authorizedApp.use((req, _res, next) => {
-      req.companyId = allowedCompanyId;
-      req.actor = {
+      (req as any).companyId = allowedCompanyId;
+      (req as any).actor = {
         type: "board",
         userId: "user-alpha",
         source: "session",
@@ -28,26 +27,24 @@ describe("Authorization Sweep & Cross-Company IDOR Matrix Tests", () => {
       next();
     });
     authorizedApp.use(governanceRoutes({} as any));
-    authorizedApp.use(salesRoutes({} as any));
     authorizedApp.use(errorHandler);
 
     // 2. Unauthenticated App (No actor or session attached)
     unauthenticatedApp = express();
     unauthenticatedApp.use(express.json());
     unauthenticatedApp.use((req, _res, next) => {
-      req.actor = { type: "none" };
+      (req as any).actor = { type: "none" };
       next();
     });
     unauthenticatedApp.use(governanceRoutes({} as any));
-    unauthenticatedApp.use(salesRoutes({} as any));
     unauthenticatedApp.use(errorHandler);
 
     // 3. Cross-Company Attacker App (User belongs to foreignCompanyId only, trying to access allowedCompanyId)
     crossCompanyAttackerApp = express();
     crossCompanyAttackerApp.use(express.json());
     crossCompanyAttackerApp.use((req, _res, next) => {
-      req.companyId = foreignCompanyId;
-      req.actor = {
+      (req as any).companyId = foreignCompanyId;
+      (req as any).actor = {
         type: "board",
         userId: "user-attacker",
         source: "session",
@@ -56,7 +53,6 @@ describe("Authorization Sweep & Cross-Company IDOR Matrix Tests", () => {
       next();
     });
     crossCompanyAttackerApp.use(governanceRoutes({} as any));
-    crossCompanyAttackerApp.use(salesRoutes({} as any));
     crossCompanyAttackerApp.use(errorHandler);
   });
 
@@ -67,17 +63,6 @@ describe("Authorization Sweep & Cross-Company IDOR Matrix Tests", () => {
 
       const res2 = await request(unauthenticatedApp).get(`/companies/${allowedCompanyId}/governance/prompts`);
       expect(res2.status).toBe(401);
-    });
-
-    it("denies unauthenticated requests to sales campaigns and leads", async () => {
-      const res1 = await request(unauthenticatedApp).get(`/companies/${allowedCompanyId}/sales/campaigns`);
-      expect(res1.status).toBe(401);
-
-      const res2 = await request(unauthenticatedApp).get(`/companies/${allowedCompanyId}/sales/prompts`);
-      expect(res2.status).toBe(401);
-
-      const res3 = await request(unauthenticatedApp).get(`/companies/${allowedCompanyId}/sales/hot-leads`);
-      expect(res3.status).toBe(401);
     });
   });
 
@@ -97,50 +82,23 @@ describe("Authorization Sweep & Cross-Company IDOR Matrix Tests", () => {
         expect(res.status).toBe(403);
       });
     }
-
-    const salesEndpoints = [
-      { method: "get", path: `/companies/${allowedCompanyId}/sales/prompts` },
-      { method: "get", path: `/companies/${allowedCompanyId}/sales/campaigns` },
-      { method: "post", path: `/companies/${allowedCompanyId}/sales/campaigns`, body: { name: "C", industry: "M", location: "B", targetTitles: ["VP"], offerProposition: "V" } },
-      { method: "get", path: `/companies/${allowedCompanyId}/sales/hot-leads` },
-      { method: "get", path: `/companies/${allowedCompanyId}/sales/suppressions` },
-      { method: "delete", path: `/companies/${allowedCompanyId}/sales/leads/lead-123` },
-      { method: "get", path: `/companies/${allowedCompanyId}/sales/campaigns/camp-123/export-csv` },
-    ];
-
-    for (const ep of salesEndpoints) {
-      it(`blocks cross-tenant access to Sales [${ep.method.toUpperCase()}] ${ep.path}`, async () => {
-        const reqBuilder = (request(crossCompanyAttackerApp) as any)[ep.method](ep.path);
-        if (ep.body) reqBuilder.send(ep.body);
-        const res = await reqBuilder;
-        expect(res.status).toBe(403);
-      });
-    }
   });
 
   describe("3. Authorized Same-Tenant Access", () => {
-    it("allows authorized operator to access their own company resources", async () => {
+    it("allows authorized operator to access their own governance resources", async () => {
       const govRes = await request(authorizedApp).get(`/companies/${allowedCompanyId}/governance/prompts`);
       expect(govRes.status).toBe(200);
-
-      const salesRes = await request(authorizedApp).get(`/companies/${allowedCompanyId}/sales/prompts`);
-      expect(salesRes.status).toBe(200);
     });
   });
 
   describe("4. Public Endpoint Allowlist (No Auth Required)", () => {
-    it("permits unauthenticated access to health and opt-out endpoints", async () => {
+    it("permits unauthenticated access to health endpoint", async () => {
       const publicApp = express();
       publicApp.get("/api/health", (_req, res) => res.json({ status: "ok" }));
-      publicApp.post("/api/sales/opt-out", (_req, res) => res.json({ success: true, optedOut: true }));
 
       const healthRes = await request(publicApp).get("/api/health");
       expect(healthRes.status).toBe(200);
       expect(healthRes.body.status).toBe("ok");
-
-      const optOutRes = await request(publicApp).post("/api/sales/opt-out").send({ token: "test-token" });
-      expect(optOutRes.status).toBe(200);
-      expect(optOutRes.body.optedOut).toBe(true);
     });
   });
 });

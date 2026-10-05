@@ -21,7 +21,7 @@ export function CompanySettingsSidebar() {
         className="flex h-(--sz-60px) shrink-0 items-center px-3"
       >
         <div data-slot="settings-back-group" className={`${primarySidebarStyles.group} w-full`}>
-          <SidebarNavItem to="/sales" label="Back to Sales Hub" icon={ArrowLeft} />
+          <SidebarNavItem to="/governance" label="Back to Governance Hub" icon={ArrowLeft} />
         </div>
       </div>
       <nav
@@ -30,7 +30,7 @@ export function CompanySettingsSidebar() {
         className={primarySidebarStyles.nav}
       >
         <div data-slot="settings-links-group" className={primarySidebarStyles.group}>
-          <SidebarNavItem to="/company/settings" label="Sales & Sender Settings" icon={SlidersHorizontal} end />
+          <SidebarNavItem to="/company/settings" label="Governance & AI Settings" icon={SlidersHorizontal} end />
           <SidebarNavItem to="/company/settings/members" label="Team Members" icon={Users} end />
           <SidebarNavItem to="/company/export" label="Export Data" icon={Download} />
         </div>

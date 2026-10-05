@@ -1008,15 +1008,15 @@ async function startServerWithDatabaseTeardown(
       const defaultCompanyId = "9a4f3774-31d3-49db-9843-25a9ef11dfe5";
       await db.insert(companies).values({
         id: defaultCompanyId,
-        name: "Auro Outbound Sales",
+        name: "Project Auro Governance",
         issuePrefix: "AURO",
-        description: "Autonomous AI Sales & Lead Generation Engine",
+        description: "Autonomous C-Suite Governance & Engineering Delivery Control Plane",
         status: "active",
       });
-      logger.info({ companyId: defaultCompanyId }, "Auto-seeded default sales organization: Auro Outbound Sales (AURO)");
+      logger.info({ companyId: defaultCompanyId }, "Auto-seeded default governance organization: Project Auro Governance (AURO)");
     }
   } catch (seedErr) {
-    logger.error({ err: seedErr }, "Failed to auto-seed sales organization");
+    logger.error({ err: seedErr }, "Failed to auto-seed governance organization");
   }
 
   try {

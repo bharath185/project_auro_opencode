@@ -56,7 +56,7 @@ export function AuroTopbar({ mobile = false }: { mobile?: boolean }) {
       >
         <Menu aria-hidden="true" />
       </Button>
-      <Link to={selectedCompany ? `/${selectedCompany.issuePrefix}/sales` : "/companies"} className="shrink-0" aria-label="Project Auro home">
+      <Link to={selectedCompany ? `/${selectedCompany.issuePrefix}/governance` : "/companies"} className="shrink-0" aria-label="Project Auro home">
         <AuroLogo className="hidden sm:inline-flex" markClassName="size-7" />
         <img src="/auro-mark.svg" alt="Project Auro" className="size-8 sm:hidden" />
       </Link>

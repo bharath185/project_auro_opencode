@@ -23,7 +23,7 @@ export interface ModelConfig {
   };
 }
 
-const DEFAULT_ROLES = ["default", "governance", "sales", "developer"] as const;
+const DEFAULT_ROLES = ["default", "governance", "engineering", "qa", "devops", "security"] as const;
 
 function fetchModelConfig(): Promise<ModelConfig> {
   return fetch("/api/model-config").then((r) => {
@@ -200,11 +200,13 @@ export function ModelMappingEditor() {
               <div key={role} className="space-y-3 p-4 border rounded-lg bg-background">
                 <div className="flex items-center gap-3">
                   <span className={cn(
-                    "px-2 py-1 text-xs font-medium rounded-full",
-                    role === "default" ? "bg-blue-100 text-blue-800" :
-                    role === "governance" ? "bg-purple-100 text-purple-800" :
-                    role === "sales" ? "bg-green-100 text-green-800" :
-                    "bg-orange-100 text-orange-800"
+                    "px-2.5 py-1 text-xs font-semibold rounded-full",
+                    role === "default" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" :
+                    role === "governance" ? "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300" :
+                    role === "engineering" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" :
+                    role === "qa" ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300" :
+                    role === "devops" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" :
+                    "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300"
                   )}>
                     {role}
                   </span>
