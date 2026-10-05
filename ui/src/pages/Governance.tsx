@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useCompany } from "@/context/CompanyContext";
+import { CEOInteractiveDiscovery } from "@/components/CEOInteractiveDiscovery";
 import { ProjectKickoffWizard } from "@/components/ProjectKickoffWizard";
 import { GovernanceOrgCard } from "@/components/GovernanceOrgCard";
 import { GovernancePromptEditor } from "@/components/GovernancePromptEditor";
 import { DocumentCenter } from "@/components/DocumentCenter";
 import { TeamAssignmentView } from "@/components/TeamAssignmentView";
-import { governanceApi, type GovernanceOrgStatus, type GovernanceDocSummary } from "@/api/governance";
+import { governanceApi, type GovernanceOrgStatus, type KickoffResponse } from "@/api/governance";
 import {
   Sparkles,
   ShieldCheck,
@@ -19,22 +20,24 @@ import {
   CheckCircle2,
   Clock,
   Layers,
-  ArrowRight,
+  Cpu,
+  MessageSquareCode,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export function Governance() {
   const { selectedCompany } = useCompany();
-  const [activeTab, setActiveTab] = useState<"docs" | "team" | "kickoff" | "org" | "prompts">("docs");
+  const [activeTab, setActiveTab] = useState<"ceo" | "docs" | "team" | "org" | "kickoff" | "prompts">("ceo");
   const [orgStatus, setOrgStatus] = useState<GovernanceOrgStatus | null>(null);
   const [docSummary, setDocSummary] = useState<{ count: number; packStatus: string; projectName: string }>({
     count: 12,
     packStatus: "in_review",
-    projectName: "Project Auro",
+    projectName: "Sarees Selling E-Commerce Platform",
   });
 
-  useEffect(() => {
+  const refreshSummary = () => {
     if (!selectedCompany?.id) return;
     governanceApi.getStatus(selectedCompany.id)
       .then((data) => setOrgStatus(data))
@@ -49,7 +52,20 @@ export function Governance() {
         });
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshSummary();
   }, [selectedCompany?.id]);
+
+  const handlePlanGenerated = (result: KickoffResponse) => {
+    setDocSummary({
+      count: Object.keys(result.documents || {}).length,
+      packStatus: "in_review",
+      projectName: result.projectName,
+    });
+    setActiveTab("docs");
+  };
 
   if (!selectedCompany) {
     return (
@@ -74,14 +90,14 @@ export function Governance() {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                    Project Governance &amp; C-Suite Engine
+                    Project Auro Governance
                   </h1>
                   <Badge variant="secondary" className="bg-primary/15 text-primary border-primary/20 text-xs font-semibold">
-                    {docSummary.packStatus === "approved" ? "Approved" : "In Review"}
+                    {docSummary.projectName}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Autonomous C-Suite Org (CEO, CTO, PM, QA, DevOps, Security) &bull; 12 Technical Documents &bull; Sprint Jira/XLSX Bundles
+                  Autonomous C-Suite Leadership (CEO, CTO, PM) &bull; Interactive Q&amp;A Discovery &bull; 12 Technical Specs &bull; Employee Download Packages
                 </p>
               </div>
             </div>
@@ -107,7 +123,7 @@ export function Governance() {
               className="text-xs h-9 font-medium shadow-xs border-border hover:bg-accent"
             >
               <a href={governanceApi.getJiraExportUrl(companyId)} download>
-                <Layers className="mr-1.5 h-3.5 w-3.5 text-blue-500" /> Jira / Linear CSV
+                <Layers className="mr-1.5 h-3.5 w-3.5 text-blue-500" /> Jira CSV
               </a>
             </Button>
 
@@ -118,7 +134,7 @@ export function Governance() {
               className="text-xs h-9 font-medium shadow-xs border-border hover:bg-accent"
             >
               <a href={governanceApi.getXlsxExportUrl(companyId)} download>
-                <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Sprint Excel (.XLSX)
+                <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Sprint XLSX
               </a>
             </Button>
 
@@ -129,7 +145,7 @@ export function Governance() {
               className="text-xs h-9 font-medium shadow-xs"
             >
               <a href={governanceApi.getMarkdownExportUrl(companyId)} download>
-                <FileText className="mr-1.5 h-3.5 w-3.5" /> Full Markdown
+                <FileText className="mr-1.5 h-3.5 w-3.5" /> All Markdown
               </a>
             </Button>
           </div>
@@ -138,14 +154,14 @@ export function Governance() {
         {/* Executive KPI Stats Bar (Ant Pro Style) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-2xs">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Users className="h-4 w-4" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <Sparkles className="h-4 w-4" />
             </div>
             <div>
               <div className="text-lg font-bold text-foreground leading-tight">
-                {orgStatus?.isComplete ? "6 / 6" : `${orgStatus?.count || 1} / 6`}
+                CEO &bull; CTO &bull; PM
               </div>
-              <div className="text-(length:--text-micro) text-muted-foreground font-medium">C-Suite Hierarchy</div>
+              <div className="text-(length:--text-micro) text-muted-foreground font-medium">Core C-Suite Trio</div>
             </div>
           </div>
 
@@ -154,8 +170,8 @@ export function Governance() {
               <BookOpen className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-lg font-bold text-foreground leading-tight">12 / 12</div>
-              <div className="text-(length:--text-micro) text-muted-foreground font-medium">Technical Specs</div>
+              <div className="text-lg font-bold text-foreground leading-tight">{docSummary.count} / 12</div>
+              <div className="text-(length:--text-micro) text-muted-foreground font-medium">Technical Documents</div>
             </div>
           </div>
 
@@ -170,7 +186,7 @@ export function Governance() {
           </div>
 
           <div className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-2xs">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
               <CheckCircle2 className="h-4 w-4" />
             </div>
             <div>
@@ -181,8 +197,22 @@ export function Governance() {
         </div>
       </div>
 
-      {/* 2. Ant-Design Segmented Pill Tab Group */}
+      {/* 2. Ant-Design Segmented Navigation Tabs */}
       <div className="flex items-center gap-1.5 p-1.5 rounded-xl border border-border bg-muted/30 max-w-full overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab("ceo")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+            activeTab === "ceo"
+              ? "bg-card text-foreground shadow-xs border border-border"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+          }`}
+        >
+          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+          CEO Discovery &amp; Planning
+          <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.2 text-[10px] font-bold text-amber-600 dark:text-amber-400">Interactive</span>
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveTab("docs")}
@@ -212,19 +242,6 @@ export function Governance() {
 
         <button
           type="button"
-          onClick={() => setActiveTab("kickoff")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-            activeTab === "kickoff"
-              ? "bg-card text-foreground shadow-xs border border-border"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-          }`}
-        >
-          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-          Project Kickoff Wizard
-        </button>
-
-        <button
-          type="button"
           onClick={() => setActiveTab("org")}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
             activeTab === "org"
@@ -233,7 +250,7 @@ export function Governance() {
           }`}
         >
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-          C-Suite Hierarchy (6 Roles)
+          C-Suite Hierarchy (CEO, CTO, PM)
         </button>
 
         <button
@@ -251,7 +268,14 @@ export function Governance() {
       </div>
 
       {/* 3. Tab Content Stage */}
-      <div className="pt-1">
+      <div className="pt-1 flex justify-center">
+        {activeTab === "ceo" && (
+          <CEOInteractiveDiscovery
+            companyId={selectedCompany.id}
+            onPlanGenerated={handlePlanGenerated}
+          />
+        )}
+
         {activeTab === "docs" && (
           <DocumentCenter companyId={selectedCompany.id} />
         )}
@@ -260,15 +284,15 @@ export function Governance() {
           <TeamAssignmentView companyId={selectedCompany.id} />
         )}
 
+        {activeTab === "org" && (
+          <GovernanceOrgCard companyId={selectedCompany.id} />
+        )}
+
         {activeTab === "kickoff" && (
           <ProjectKickoffWizard
             companyId={selectedCompany.id}
-            onSuccess={() => setActiveTab("docs")}
+            onSuccess={handlePlanGenerated}
           />
-        )}
-
-        {activeTab === "org" && (
-          <GovernanceOrgCard companyId={selectedCompany.id} />
         )}
 
         {activeTab === "prompts" && (

@@ -330,6 +330,7 @@ export function loadConfig(): Config {
     authDisableSignUp,
     databaseMode: fileDatabaseMode,
     databaseUrl: process.env.DATABASE_URL ?? fileDbUrl,
+    databaseMigrationUrl: process.env.DATABASE_MIGRATION_URL ?? undefined,
     embeddedPostgresDataDir: resolveHomeAwarePath(
       process.env.PAPERCLIP_EMBEDDED_POSTGRES_DATA_DIR ??
         process.env.PAPERCLIP_DATABASE_DATA_DIR ??

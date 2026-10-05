@@ -17,6 +17,28 @@ export interface GovernanceOrgStatus {
   agents: GovernanceAgentSummary[];
 }
 
+export interface CeoQuestionOption {
+  id: string;
+  label: string;
+  description?: string;
+  isRecommended?: boolean;
+}
+
+export interface CeoDiscoveryQuestion {
+  id: string;
+  category: string;
+  question: string;
+  explanation: string;
+  options: CeoQuestionOption[];
+}
+
+export interface CeoConsultationAnalysis {
+  projectTitle: string;
+  domain: string;
+  executiveObservation: string;
+  questions: CeoDiscoveryQuestion[];
+}
+
 export interface GovernancePrompt {
   role: string;
   title: string;
@@ -140,6 +162,23 @@ export const governanceApi = {
 
   submitKickoff: (companyId: string, brief: ProjectKickoffBriefPayload) =>
     api.post<KickoffResponse>(`/companies/${companyId}/governance/kickoff`, brief),
+
+  ceoConsult: (companyId: string, ideaPrompt: string) =>
+    api.post<CeoConsultationAnalysis>(`/companies/${companyId}/governance/ceo/consult`, { ideaPrompt }),
+
+  ceoSynthesize: (
+    companyId: string,
+    payload: {
+      ideaPrompt: string;
+      answers: Record<string, string>;
+      projectName?: string;
+    },
+  ) =>
+    api.post<{
+      success: boolean;
+      brief: any;
+      result: KickoffResponse;
+    }>(`/companies/${companyId}/governance/ceo/synthesize`, payload),
 
   listDocuments: (companyId: string) =>
     api.get<{

@@ -31,6 +31,10 @@ import {
 import { governanceTeamAssignmentService } from "../services/governance-team-assignment.js";
 import { codingAgentGovernanceService } from "../services/coding-agent-governance.js";
 import { logActivity } from "../services/activity-log.js";
+import {
+  analyzeIdeaAndGenerateQuestions,
+  compileCeoExecutiveBrief,
+} from "../services/ceo-consultation.js";
 import { unprocessable, notFound } from "../errors.js";
 
 const kickoffBriefSchema = z.object({
@@ -293,6 +297,95 @@ export function governanceRoutes(db: Db) {
   };
   router.post("/companies/:companyId/governance/kickoff", validate(kickoffBriefSchema), handleKickoff);
   router.post("/governance/kickoff", validate(kickoffBriefSchema), handleKickoff);
+
+  // 1. Real-time CEO Discovery & Consultation Questions
+  const handleCeoConsult = async (req: Request, res: any) => {
+    resolveCompanyId(req);
+    const { ideaPrompt } = req.body;
+    if (!ideaPrompt || typeof ideaPrompt !== "string") {
+      throw unprocessable("Project idea prompt is required");
+    }
+    const analysis = analyzeIdeaAndGenerateQuestions(ideaPrompt);
+    res.json(analysis);
+  };
+  router.post("/companies/:companyId/governance/ceo/consult", handleCeoConsult);
+  router.post("/governance/ceo/consult", handleCeoConsult);
+
+  // 2. CEO Executive Synthesis & C-Suite Handoff Orchestration
+  const handleCeoSynthesize = async (req: Request, res: any) => {
+    const companyId = resolveCompanyId(req);
+    const { ideaPrompt, answers, projectName } = req.body;
+    if (!ideaPrompt || typeof ideaPrompt !== "string") {
+      throw unprocessable("Project idea is required");
+    }
+    const brief = compileCeoExecutiveBrief(ideaPrompt, answers || {}, projectName);
+
+    const result = await orchSvc.submitKickoffBrief(companyId, {
+      projectName: brief.projectName,
+      problem: brief.problem,
+      targetUsers: brief.targetUsers,
+      goals: brief.goals,
+      constraints: brief.constraints,
+      budget: brief.budget,
+      deadline: brief.deadline,
+      preferredStack: brief.preferredStack,
+      teamSizeAndSkills: brief.teamSizeAndSkills,
+      isDemo: false,
+    });
+
+    const actor = getActorInfo(req);
+    const storeDocs: any = {};
+    for (const [kind, doc] of Object.entries(result.documents)) {
+      storeDocs[kind] = {
+        kind,
+        title: doc.title,
+        fileName: doc.fileName,
+        authorRole: doc.authorRole,
+        currentVersion: 1,
+        versions: [
+          {
+            version: 1,
+            content: doc.content,
+            authorRole: doc.authorRole,
+            changeSummary: "CEO Strategic Synthesis & CTO/PM Handoff Generation",
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        reviews: [],
+      };
+    }
+    companyDocStore.set(companyId, {
+      projectName: result.projectName,
+      packStatus: "in_review",
+      sprintStories: result.sprintStories,
+      documents: storeDocs,
+    });
+
+    await logActivity(db, {
+      companyId,
+      actorType: actor.actorType,
+      actorId: actor.actorId,
+      agentId: actor.agentId,
+      runId: actor.runId,
+      agentApiKeyId: actor.agentApiKeyId,
+      action: "governance.ceo_synthesis_completed",
+      entityType: "goal",
+      entityId: result.goalId,
+      details: {
+        projectName: result.projectName,
+        domain: "ecommerce_saree_or_custom",
+        goalId: result.goalId,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      brief,
+      result,
+    });
+  };
+  router.post("/companies/:companyId/governance/ceo/synthesize", handleCeoSynthesize);
+  router.post("/governance/ceo/synthesize", handleCeoSynthesize);
 
   // List all 12 Governance Documents with metadata and validation status
   const handleListDocs = async (req: Request, res: any) => {
