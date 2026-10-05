@@ -150,10 +150,10 @@ function ProductionSurface({ children }: { children: ReactNode }) {
 function boardRoutes(streamlinedUiEnabled: boolean) {
   return (
     <>
-      <Route index element={<Navigate to="sales" replace />} />
-      <Route path="dashboard" element={<Navigate to="/sales" replace />} />
+      <Route index element={<Navigate to="governance" replace />} />
+      <Route path="dashboard" element={<Navigate to="/governance" replace />} />
       <Route path="about" element={<AboutPage />} />
-      <Route path="dashboard/live" element={<Navigate to="/sales" replace />} />
+      <Route path="dashboard/live" element={<Navigate to="/governance" replace />} />
       <Route
         path="timeline"
         element={streamlinedUiEnabled ? <AuditCompatibilityRedirect to="/activity/timeline" /> : <Timeline />}
@@ -381,11 +381,11 @@ function boardRoutes(streamlinedUiEnabled: boolean) {
       <Route path="goals" element={<Goals />} />
       <Route path="goals/:goalId" element={<GoalDetail />} />
       <Route path="governance" element={<Governance />} />
-      <Route path="sales" element={<Sales />} />
+      <Route path="sales" element={<Navigate to="/governance" replace />} />
       <Route path="artifacts" element={<Artifacts />} />
-      <Route path="approvals" element={<SalesInbox />} />
-      <Route path="approvals/pending" element={<SalesInbox />} />
-      <Route path="approvals/all" element={<SalesInbox />} />
+      <Route path="approvals" element={<Approvals />} />
+      <Route path="approvals/pending" element={<Approvals />} />
+      <Route path="approvals/all" element={<Approvals />} />
       <Route path="approvals/:approvalId" element={<ApprovalDetail />} />
       <Route path="activity" element={streamlinedUiEnabled ? <CompanyActivity /> : <ProductionSurface><ProductionCompanyActivity /></ProductionSurface>} />
       {streamlinedUiEnabled ? (
@@ -425,12 +425,12 @@ function boardRoutes(streamlinedUiEnabled: boolean) {
       ) : null}
       <Route path="decisions" element={<WhatNeedsMe />} />
       <Route path="decisions/queues/:key" element={<DecisionQueuePage />} />
-      <Route path="inbox" element={<SalesInbox />} />
-      <Route path="inbox/mine" element={<SalesInbox />} />
-      <Route path="inbox/recent" element={<SalesInbox />} />
-      <Route path="inbox/unread" element={<SalesInbox />} />
-      <Route path="inbox/blocked" element={<SalesInbox />} />
-      <Route path="inbox/all" element={<SalesInbox />} />
+      <Route path="inbox" element={<Inbox />} />
+      <Route path="inbox/mine" element={<Inbox />} />
+      <Route path="inbox/recent" element={<Inbox />} />
+      <Route path="inbox/unread" element={<Inbox />} />
+      <Route path="inbox/blocked" element={<Inbox />} />
+      <Route path="inbox/all" element={<Inbox />} />
       <Route path="inbox/requests" element={<JoinRequestQueue />} />
       <Route path="inbox/new" element={<Navigate to="/inbox/mine" replace />} />
       <Route path="u/:userSlug" element={<UserProfile />} />
@@ -648,7 +648,7 @@ function CompanyRootRedirect() {
     return <NoCompaniesStartPage />;
   }
 
-  return <Navigate to={`/${targetCompany.issuePrefix}/sales`} replace />;
+  return <Navigate to={`/${targetCompany.issuePrefix}/governance`} replace />;
 }
 
 function StatusCardsLegacyRedirect() {

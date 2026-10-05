@@ -330,11 +330,16 @@ export function loadConfig(): Config {
     authDisableSignUp,
     databaseMode: fileDatabaseMode,
     databaseUrl: process.env.DATABASE_URL ?? fileDbUrl,
-    databaseMigrationUrl: process.env.DATABASE_MIGRATION_URL,
     embeddedPostgresDataDir: resolveHomeAwarePath(
-      fileConfig?.database.embeddedPostgresDataDir ?? resolveDefaultEmbeddedPostgresDir(),
+      process.env.PAPERCLIP_EMBEDDED_POSTGRES_DATA_DIR ??
+        process.env.PAPERCLIP_DATABASE_DATA_DIR ??
+        fileConfig?.database.embeddedPostgresDataDir ??
+        resolveDefaultEmbeddedPostgresDir(),
     ),
-    embeddedPostgresPort: fileConfig?.database.embeddedPostgresPort ?? 54329,
+    embeddedPostgresPort:
+      Number(process.env.PAPERCLIP_EMBEDDED_POSTGRES_PORT ?? process.env.PAPERCLIP_DATABASE_PORT) ||
+      fileConfig?.database.embeddedPostgresPort ||
+      54329,
     databaseBackupEnabled,
     databaseBackupIntervalMinutes,
     databaseBackupRetentionDays,
