@@ -616,3 +616,197 @@ export function generateGovernanceDocumentPack(
   }
   return result;
 }
+
+export interface DynamicSprintStory {
+  id: string;
+  epic: string;
+  summary: string;
+  issueType: "Story" | "Task" | "Bug" | "Epic";
+  description: string;
+  priority: "Highest" | "High" | "Medium" | "Low";
+  storyPoints: number;
+  acceptanceCriteria: string;
+  assigneeRole: string;
+  dependsOn?: string;
+}
+
+/**
+ * Dynamically breaks down the project summary into Agile Epics, User Stories, and Engineering Tasks
+ * tailored specifically for human engineering employees to execute manually.
+ */
+export function generateDynamicSprintStories(ctx: GovernanceProjectContext): DynamicSprintStory[] {
+  const name = ctx.projectName || "Project";
+  const stack = ctx.preferredStack || "TypeScript, React, Node.js, PostgreSQL";
+  const audience = ctx.targetUsers || "End Users";
+  const integrations = ctx.integrations || "Standard REST APIs & Cloud Storage";
+
+  return [
+    // --- Epic 1: Architecture & Data Layer ---
+    {
+      id: "US-101",
+      epic: "Architecture & Data Layer",
+      summary: `System Architecture & Schema Design for ${name}`,
+      issueType: "Story",
+      description: `Establish the database schema, relational tables, migrations, and repository patterns using ${stack}.`,
+      priority: "Highest",
+      storyPoints: 5,
+      acceptanceCriteria: `Given the project requirements for ${name}, when the database migrations run, then all primary entities, foreign keys, and indexes must be created successfully.`,
+      assigneeRole: "Lead Architect / CTO",
+      dependsOn: "None",
+    },
+    {
+      id: "TASK-102",
+      epic: "Architecture & Data Layer",
+      summary: `Database Migrations & Seed Scripts`,
+      issueType: "Task",
+      description: `Write and verify SQL/ORM migrations, seed data, and connection pooling for the persistence layer.`,
+      priority: "High",
+      storyPoints: 3,
+      acceptanceCriteria: `Database passes migration tests and clean rollback on failure.`,
+      assigneeRole: "Backend Engineer",
+      dependsOn: "US-101",
+    },
+
+    // --- Epic 2: Core Backend Services & APIs ---
+    {
+      id: "US-201",
+      epic: "Core Backend Services",
+      summary: `Core Business Logic & Domain Services for ${name}`,
+      issueType: "Story",
+      description: `Implement the foundational business logic, validation routines, and data access layers to solve: ${ctx.problem.slice(0, 150)}...`,
+      priority: "Highest",
+      storyPoints: 8,
+      acceptanceCriteria: `Given valid input parameters from ${audience}, when service methods are called, then the business rules are executed and valid domain entities are returned.`,
+      assigneeRole: "Backend Engineer",
+      dependsOn: "TASK-102",
+    },
+    {
+      id: "US-202",
+      epic: "Core Backend Services",
+      summary: `REST / GraphQL API Endpoints & OpenAPI Contract`,
+      issueType: "Story",
+      description: `Expose authenticated REST API endpoints with request validation (Zod/JSON Schema), error handling, and OpenAPI documentation.`,
+      priority: "High",
+      storyPoints: 5,
+      acceptanceCriteria: `All endpoints return structured JSON, proper HTTP status codes (200, 201, 400, 401, 404, 500), and pass OpenAPI contract validation.`,
+      assigneeRole: "Backend Engineer",
+      dependsOn: "US-201",
+    },
+    {
+      id: "TASK-203",
+      epic: "Core Backend Services",
+      summary: `External Integrations: ${integrations}`,
+      issueType: "Task",
+      description: `Build secure client adapters, rate-limiting, and error-handling for integrations: ${integrations}.`,
+      priority: "Medium",
+      storyPoints: 5,
+      acceptanceCriteria: `Integration clients handle timeouts, retries, and return normalized data structures.`,
+      assigneeRole: "Backend Engineer",
+      dependsOn: "US-202",
+    },
+
+    // --- Epic 3: User Interface & Experience ---
+    {
+      id: "US-301",
+      epic: "Frontend & UI Experience",
+      summary: `Dashboard & Primary User Workflows for ${audience}`,
+      issueType: "Story",
+      description: `Design and implement responsive user interface components, interactive tables, cards, and state management for ${audience}.`,
+      priority: "Highest",
+      storyPoints: 8,
+      acceptanceCriteria: `Given an authenticated user, when navigating the main dashboard, then all metrics, active records, and interactive controls render smoothly.`,
+      assigneeRole: "Frontend Lead",
+      dependsOn: "US-202",
+    },
+    {
+      id: "US-302",
+      epic: "Frontend & UI Experience",
+      summary: `Forms, Data Validation & Client Error Feedback`,
+      issueType: "Story",
+      description: `Implement intuitive form wizards, live input validation, loading states, and accessible error messages.`,
+      priority: "High",
+      storyPoints: 5,
+      acceptanceCriteria: `Forms prevent invalid submission with inline error feedback and show progress spinners during network requests.`,
+      assigneeRole: "Frontend Engineer",
+      dependsOn: "US-301",
+    },
+
+    // --- Epic 4: Security, Auth & Compliance ---
+    {
+      id: "US-401",
+      epic: "Security & Compliance",
+      summary: `Authentication, Role-Based Access Control (RBAC) & Audit Logging`,
+      issueType: "Story",
+      description: `Implement secure JWT/session authentication, tenant authorization gates, and structured audit logging for all mutating operations.`,
+      priority: "Highest",
+      storyPoints: 5,
+      acceptanceCriteria: `Unauthorized access attempts return 401/403 and are logged in the audit trail with actor details.`,
+      assigneeRole: "Security Engineer",
+      dependsOn: "US-202",
+    },
+    {
+      id: "TASK-402",
+      epic: "Security & Compliance",
+      summary: `Security Hardening, CSP, & Input Sanitization`,
+      issueType: "Task",
+      description: `Enforce Content Security Policy (CSP), DOMPurify XSS protection, anti-SSRF IP filtering, and secret key encryption.`,
+      priority: "High",
+      storyPoints: 3,
+      acceptanceCriteria: `Security vulnerability scans pass with zero High/Critical findings.`,
+      assigneeRole: "Security Engineer",
+      dependsOn: "US-401",
+    },
+
+    // --- Epic 5: Quality Assurance & Automated Testing ---
+    {
+      id: "US-501",
+      epic: "Quality Assurance",
+      summary: `Unit & Integration Test Suite for ${name}`,
+      issueType: "Story",
+      description: `Develop automated Vitest/Jest unit tests and API integration test suites achieving >85% code coverage.`,
+      priority: "High",
+      storyPoints: 5,
+      acceptanceCriteria: `100% of automated test suites pass cleanly in CI environment with zero regressions.`,
+      assigneeRole: "QA Lead",
+      dependsOn: "US-202",
+    },
+    {
+      id: "TASK-502",
+      epic: "Quality Assurance",
+      summary: `End-to-End (E2E) Critical Flow Automation`,
+      issueType: "Task",
+      description: `Automate end-to-end user journeys using Playwright/Cypress for core onboarding and data operations.`,
+      priority: "Medium",
+      storyPoints: 5,
+      acceptanceCriteria: `E2E tests verify complete browser workflows and capture diagnostic screenshots on failure.`,
+      assigneeRole: "QA Engineer",
+      dependsOn: "US-301",
+    },
+
+    // --- Epic 6: DevOps, CI/CD & Deployment ---
+    {
+      id: "US-601",
+      epic: "DevOps & Infrastructure",
+      summary: `Automated CI/CD Pipeline & Docker Containerization`,
+      issueType: "Story",
+      description: `Create Dockerfiles, multi-stage build optimization, and GitHub Actions CI/CD workflows for automated build, lint, and test.`,
+      priority: "High",
+      storyPoints: 5,
+      acceptanceCriteria: `Pull requests trigger automated typecheck, lint, and test runs; successful merges trigger automated deployment.`,
+      assigneeRole: "DevOps Lead",
+      dependsOn: "TASK-102",
+    },
+    {
+      id: "TASK-602",
+      epic: "DevOps & Infrastructure",
+      summary: `Production Staging & Health Monitoring`,
+      issueType: "Task",
+      description: `Deploy to staging environment, configure /api/health probes, telemetry logging, and automated database backups.`,
+      priority: "Medium",
+      storyPoints: 3,
+      acceptanceCriteria: `Staging environment is reachable, /api/health returns 200 OK, and scheduled backups are active.`,
+      assigneeRole: "DevOps Lead",
+      dependsOn: "US-601",
+    },
+  ];
+}

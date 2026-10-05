@@ -14,6 +14,7 @@ import {
   GOVERNANCE_DOC_DEFINITIONS,
   validateGovernanceDocument,
   generateGovernanceDocumentPack,
+  generateDynamicSprintStories,
   type GovernanceDocumentKind,
 } from "../services/governance-documents.js";
 import {
@@ -25,6 +26,7 @@ import {
   exportJiraImportCsv,
   exportSprintBacklogXlsx,
   DEFAULT_SPRINT_STORIES,
+  type SprintStoryItem,
 } from "../services/governance-export.js";
 import { governanceTeamAssignmentService } from "../services/governance-team-assignment.js";
 import { codingAgentGovernanceService } from "../services/coding-agent-governance.js";
@@ -85,6 +87,7 @@ const companyDocStore = new Map<
   {
     projectName: string;
     packStatus: "draft" | "in_review" | "approved";
+    sprintStories?: SprintStoryItem[];
     documents: Record<
       GovernanceDocumentKind,
       {
@@ -104,6 +107,14 @@ function getOrCreateCompanyDocs(companyId: string, projectName: string = "Projec
   let store = companyDocStore.get(companyId);
   if (!store) {
     const rawPack = generateGovernanceDocumentPack({
+      projectName,
+      problem: "Autonomous project kickoff and document generation",
+      targetUsers: "Project teams and engineering leaders",
+      goals: "Complete governance document pack with full validation",
+      isDemo: true,
+    });
+
+    const dynamicStories = generateDynamicSprintStories({
       projectName,
       problem: "Autonomous project kickoff and document generation",
       targetUsers: "Project teams and engineering leaders",
@@ -137,6 +148,7 @@ function getOrCreateCompanyDocs(companyId: string, projectName: string = "Projec
     store = {
       projectName,
       packStatus: "in_review",
+      sprintStories: dynamicStories,
       documents: docsMap,
     };
     companyDocStore.set(companyId, store);
@@ -255,6 +267,7 @@ export function governanceRoutes(db: Db) {
     companyDocStore.set(companyId, {
       projectName: result.projectName,
       packStatus: "in_review",
+      sprintStories: result.sprintStories,
       documents: storeDocs,
     });
 
@@ -495,6 +508,11 @@ export function governanceRoutes(db: Db) {
       zipFiles[doc.fileName] = latest.content;
     }
 
+    const stories =
+      store.sprintStories && store.sprintStories.length > 0
+        ? store.sprintStories
+        : DEFAULT_SPRINT_STORIES;
+
     switch (format) {
       case "markdown":
       case "md": {
@@ -505,6 +523,50 @@ export function governanceRoutes(db: Db) {
       }
 
       case "zip": {
+        const sprintCsv = exportSprintBacklogCsv(stories);
+        const jiraCsv = exportJiraImportCsv(store.projectName, stories);
+        const readmeForDevs = `# Engineering Hand-off Guide: ${store.projectName}
+
+Welcome to the **${store.projectName}** project repository! This complete package was autonomously prepared by the C-Suite Governance Agent Pack (CEO, CTO, PM, Lead Architect, QA, DevOps, and Security Leads) and contains everything human engineering teams need to execute the project manually.
+
+## Included Governance & Architecture Documents
+1. **CHARTER.md** - Project Charter & Vision (CEO)
+2. **PRD.md** - Product Requirements Document & Epics (PM)
+3. **ARCHITECTURE.md** - System Architecture, Modular Design & Mermaid Diagrams (CTO)
+4. **TECH_STACK.md** - Technology Stack Decisions & Justifications (CTO)
+5. **DB_OPENAPI.md** - Database Schema (ERD) & OpenAPI 3.0 Endpoints (CTO)
+6. **EXECUTION_PLAN.md** - Timeline, Milestones & Deliverables (PM)
+7. **SPRINT_PLAN.md** - Sprint Breakdown & Story Allocations (PM)
+8. **TEAM_ALLOCATION.md** - Role Allocations & Capacity Matrix (CEO)
+9. **TEST_STRATEGY.md** - Test Strategy, Test Automation & QA Checklist (QA)
+10. **INFRA_SPEC.md** - CI/CD Pipelines & Infrastructure Spec (DevOps)
+11. **THREAT_MODEL.md** - STRIDE Threat Analysis & Security Controls (Security)
+12. **RISK_RACI.md** - Risk Register & RACI Responsibility Matrix (CEO)
+
+## Agile Work Breakdown & Backlog
+- **\`SPRINT_BACKLOG.csv\`**: Full sprint backlog with Story Points, Priority, Assignee Roles, Dependencies, and Gherkin Acceptance Criteria.
+- **\`JIRA_IMPORT.csv\`**: Formatted for direct 1-click import into Jira, Linear, ClickUp, or GitHub Projects.
+
+## Quick Start for Developers
+1. Review **\`ARCHITECTURE.md\`** and **\`DB_OPENAPI.md\`** before implementing data models.
+2. Import **\`JIRA_IMPORT.csv\`** into your team's project tracking board.
+3. Review **\`TEST_STRATEGY.md\`** and ensure all PRs satisfy acceptance criteria and definition of done.
+`;
+
+        const projectPackSummary = `# Project Governance Pack Summary: ${store.projectName}
+- **Status**: APPROVED by CEO
+- **Total Validated Documents**: 12 / 12
+- **Sprint Stories Count**: ${stories.length}
+- **Export Date**: ${new Date().toISOString()}
+
+All 12 documents have been cross-reviewed and approved by the C-Suite and Lead Engineers.
+`;
+
+        zipFiles["SPRINT_BACKLOG.csv"] = sprintCsv;
+        zipFiles["JIRA_IMPORT.csv"] = jiraCsv;
+        zipFiles["README_FOR_DEVELOPERS.md"] = readmeForDevs;
+        zipFiles["PROJECT_PACK_SUMMARY.md"] = projectPackSummary;
+
         const zip = exportZipArchive(zipFiles);
         res.setHeader("Content-Type", "application/zip");
         res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-governance-pack.zip"`);
@@ -527,7 +589,7 @@ export function governanceRoutes(db: Db) {
 
       case "sprint-csv":
       case "csv": {
-        const csv = exportSprintBacklogCsv(DEFAULT_SPRINT_STORIES);
+        const csv = exportSprintBacklogCsv(stories);
         res.setHeader("Content-Type", "text/csv");
         res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-sprint-backlog.csv"`);
         return res.send(csv);
@@ -535,7 +597,7 @@ export function governanceRoutes(db: Db) {
 
       case "jira-csv":
       case "jira": {
-        const jiraCsv = exportJiraImportCsv(store.projectName, DEFAULT_SPRINT_STORIES);
+        const jiraCsv = exportJiraImportCsv(store.projectName, stories);
         res.setHeader("Content-Type", "text/csv");
         res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-jira-backlog.csv"`);
         return res.send(jiraCsv);
@@ -543,7 +605,7 @@ export function governanceRoutes(db: Db) {
 
       case "sprint-xlsx":
       case "xlsx": {
-        const xlsx = exportSprintBacklogXlsx(store.projectName, DEFAULT_SPRINT_STORIES);
+        const xlsx = exportSprintBacklogXlsx(store.projectName, stories);
         res.setHeader("Content-Type", "application/vnd.ms-excel");
         res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-sprint-backlog.xlsx"`);
         return res.send(xlsx);

@@ -9,8 +9,10 @@ import {
   GOVERNANCE_DOC_DEFINITIONS,
   generateGovernanceDocumentPack,
   validateGovernanceDocument,
+  generateDynamicSprintStories,
   type GovernanceDocumentKind,
   type GovernanceProjectContext,
+  type DynamicSprintStory,
 } from "./governance-documents.js";
 import { executeWithModelFallback } from "./model-fallback.js";
 import { unprocessable, notFound } from "../errors.js";
@@ -63,6 +65,7 @@ export interface KickoffOrchestrationResult {
   executionMode: "demo" | "live";
   documents: Record<GovernanceDocumentKind, GeneratedDocument>;
   workstreams: WorkstreamTaskResult[];
+  sprintStories: DynamicSprintStory[];
   projectPackSummary: GeneratedDocument;
   status: "completed" | "in_review" | "in_progress";
   dependencyOrder: string[];
@@ -439,6 +442,8 @@ ${isDemo ? "> **Execution Mode: Demo Mode (Mock Engine)**\n" : "> **Execution Mo
       missingSections: [],
     };
 
+    const dynamicSprintStories = generateDynamicSprintStories(docContext);
+
     return {
       goalId: goal.id,
       kickoffIssueId: kickoffIssue.id,
@@ -447,6 +452,7 @@ ${isDemo ? "> **Execution Mode: Demo Mode (Mock Engine)**\n" : "> **Execution Mo
       executionMode,
       documents: validatedDocs,
       workstreams,
+      sprintStories: dynamicSprintStories,
       projectPackSummary,
       status: "completed",
       dependencyOrder,

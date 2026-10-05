@@ -18,6 +18,11 @@ import {
   FileCode,
   Layers,
   Sparkles,
+  FolderArchive,
+  FileSpreadsheet,
+  BookOpen,
+  Users,
+  CheckSquare,
 } from "lucide-react";
 
 interface DocumentCenterProps {
@@ -39,6 +44,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
   const [approving, setApproving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showHandoffGuide, setShowHandoffGuide] = useState(false);
 
   // New review form
   const [reviewerRole, setReviewerRole] = useState("qa");
@@ -176,7 +182,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
           </p>
         </div>
 
-        {/* CEO Approval & Export Dropdown */}
+        {/* CEO Approval & Export Actions */}
         <div className="flex flex-wrap items-center gap-2">
           {packStatus !== "approved" ? (
             <button
@@ -194,50 +200,103 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
             </span>
           )}
 
-          {/* Export Buttons */}
-          <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg border border-border text-xs">
+          <button
+            type="button"
+            onClick={() => setShowHandoffGuide(!showHandoffGuide)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors"
+          >
+            <BookOpen className="h-3.5 w-3.5 text-emerald-500" />
+            {showHandoffGuide ? "Hide Guide" : "Employee Hand-off Guide"}
+          </button>
+        </div>
+      </div>
+
+      {/* Prominent Employee Project Package Download Banner */}
+      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 sm:p-5 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <FolderArchive className="h-4 w-4 text-emerald-500" />
+              Complete Engineering Project Pack for Human Employees
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Download the entire project package (12 technical docs, Agile sprint backlog, Jira CSV, and developer hand-off guide) for manual execution by your engineers.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
             <a
               href={getExportUrl("zip")}
               download
-              className="px-2.5 py-1.5 rounded hover:bg-background transition-colors font-medium flex items-center gap-1"
-              title="Download full pack as ZIP archive"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
+              title="Download full project pack as ZIP bundle"
             >
-              <Download className="h-3.5 w-3.5" /> ZIP
-            </a>
-            <a
-              href={getExportUrl("pdf")}
-              download
-              className="px-2.5 py-1.5 rounded hover:bg-background transition-colors font-medium flex items-center gap-1"
-              title="Export as PDF"
-            >
-              <Download className="h-3.5 w-3.5" /> PDF
-            </a>
-            <a
-              href={getExportUrl("docx")}
-              download
-              className="px-2.5 py-1.5 rounded hover:bg-background transition-colors font-medium flex items-center gap-1"
-              title="Export as Microsoft Word DOCX"
-            >
-              <Download className="h-3.5 w-3.5" /> DOCX
+              <Download className="h-4 w-4" /> Download Complete ZIP Bundle
             </a>
             <a
               href={getExportUrl("jira-csv")}
               download
-              className="px-2.5 py-1.5 rounded hover:bg-background transition-colors font-medium flex items-center gap-1"
-              title="Export Jira-importable CSV backlog"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-card hover:bg-muted text-foreground border border-border transition-colors"
+              title="Import into Jira, Linear, or ClickUp"
             >
-              <Download className="h-3.5 w-3.5" /> Jira CSV
+              <FileSpreadsheet className="h-3.5 w-3.5 text-blue-500" /> Jira / Linear CSV
             </a>
             <a
               href={getExportUrl("sprint-xlsx")}
               download
-              className="px-2.5 py-1.5 rounded hover:bg-background transition-colors font-medium flex items-center gap-1"
-              title="Export Sprint Backlog XLSX Spreadsheet"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-card hover:bg-muted text-foreground border border-border transition-colors"
+              title="Export Excel spreadsheet"
             >
-              <Download className="h-3.5 w-3.5" /> XLSX
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" /> Sprint XLSX
+            </a>
+            <a
+              href={getExportUrl("markdown")}
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-card hover:bg-muted text-foreground border border-border transition-colors"
+              title="Combined Markdown"
+            >
+              <FileText className="h-3.5 w-3.5" /> All-in-One MD
+            </a>
+            <a
+              href={getExportUrl("pdf")}
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-card hover:bg-muted text-foreground border border-border transition-colors"
+              title="Printable PDF"
+            >
+              <Download className="h-3.5 w-3.5 text-red-500" /> PDF
             </a>
           </div>
         </div>
+
+        {/* Expandable Employee Hand-off Roadmap */}
+        {showHandoffGuide && (
+          <div className="mt-3 pt-3 border-t border-emerald-500/20 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div className="rounded-lg border border-border bg-card p-3 space-y-1">
+              <span className="font-bold text-foreground flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-emerald-500" /> Step 1: Assign Team Roles
+              </span>
+              <p className="text-muted-foreground">
+                Distribute <strong>TEAM_ALLOCATION.md</strong> and <strong>RISK_RACI.md</strong> to assign Lead Architects, Backend, Frontend, QA, and DevOps engineers.
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 space-y-1">
+              <span className="font-bold text-foreground flex items-center gap-1.5">
+                <CheckSquare className="h-3.5 w-3.5 text-blue-500" /> Step 2: Import Jira Backlog
+              </span>
+              <p className="text-muted-foreground">
+                Import <strong>JIRA_IMPORT.csv</strong> into your Jira, Linear, or GitHub Project board to populate all Epics, User Stories, and Gherkin Acceptance Criteria.
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 space-y-1">
+              <span className="font-bold text-foreground flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-purple-500" /> Step 3: Implement & Verify
+              </span>
+              <p className="text-muted-foreground">
+                Have developers follow <strong>ARCHITECTURE.md</strong> and <strong>DB_OPENAPI.md</strong>, and enforce test suites outlined in <strong>TEST_STRATEGY.md</strong>.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Alerts */}

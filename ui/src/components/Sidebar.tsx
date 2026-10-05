@@ -5,6 +5,7 @@ import {
   Users,
   TrendingUp,
   History,
+  FolderKanban,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { SidebarSection } from "./SidebarSection";
@@ -40,8 +41,9 @@ export function Sidebar({ children }: { children?: ReactNode }) {
       </div>
 
       <nav className={primarySidebarStyles.nav}>
-        {/* Core Sales Operations */}
+        {/* Core Operations */}
         <div className={primarySidebarStyles.group}>
+          <SidebarNavItem to="/governance" label="Project Governance" icon={FolderKanban} />
           <SidebarNavItem to="/sales" label="Sales Hub" icon={TrendingUp} />
           <SidebarNavItem
             to="/inbox"
@@ -52,7 +54,7 @@ export function Sidebar({ children }: { children?: ReactNode }) {
             badgeTone={inboxBadge.failedRuns > 0 ? "danger" : "default"}
             alert={inboxBadge.failedRuns > 0}
           />
-          <SidebarNavItem to="/agents" label="Sales Team" icon={Users} />
+          <SidebarNavItem to="/agents" label="Agents Team" icon={Users} />
           <SidebarNavItem to="/search" label="Search" icon={Search} />
         </div>
 
