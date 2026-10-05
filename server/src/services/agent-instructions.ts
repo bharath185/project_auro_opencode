@@ -768,7 +768,7 @@ export function agentInstructionsService(db?: Db) {
       await assertInstructionPathSafe(rootPath, agentFilePath(relativePath));
     }
     const previous = await readInstructionBytes(rootPath, entryFile);
-    if (previous && !previous.equals(instructionBytes(files[entryFile] ?? ""))) {
+    if (!options?.replaceExisting && previous && !previous.equals(instructionBytes(files[entryFile] ?? ""))) {
       throw unprocessable("Existing entry content must be saved through the canonical revision API before replacing a bundle", { code: "INSTRUCTION_REVISION_REQUIRED" });
     }
     if (options?.replaceExisting) {

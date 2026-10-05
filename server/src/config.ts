@@ -349,7 +349,7 @@ export function loadConfig(): Config {
       process.env.SERVE_UI !== undefined
         ? process.env.SERVE_UI === "true"
         : fileConfig?.server.serveUi ?? true,
-    uiDevMiddleware: process.env.PAPERCLIP_UI_DEV_MIDDLEWARE === "true",
+    uiDevMiddleware: process.env.PAPERCLIP_UI_DEV_MIDDLEWARE !== "false",
     secretsProvider,
     secretsStrictMode,
     secretsMasterKeyFilePath:

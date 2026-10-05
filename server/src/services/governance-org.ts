@@ -262,25 +262,7 @@ export function governanceOrgService(db: Db) {
         permissions: ceoDef.permissions,
         status: "idle",
       });
-    } else {
-      await agentSvc.update(ceoAgent.id, {
-        title: ceoDef.title,
-        budgetMonthlyCents: ceoDef.budgetMonthlyCents,
-        permissions: ceoDef.permissions,
-      });
     }
-
-    // Initialize managed instructions bundle with versioned prompt
-    await instructionsSvc.materializeManagedBundle(
-      {
-        id: ceoAgent.id,
-        companyId,
-        name: ceoAgent.name,
-        adapterConfig: ceoAgent.adapterConfig,
-      },
-      { "AGENTS.md": ceoPrompt },
-      { replaceExisting: true },
-    );
 
     createdAgentMap.ceo = ceoAgent;
 
@@ -295,8 +277,6 @@ export function governanceOrgService(db: Db) {
         options?.customModels?.[role] ??
         modelConfig.model_mapping?.[role]?.primary ??
         def.defaultModel;
-
-      const prompt = await readGovernancePromptFile(role);
 
       if (!agent) {
         agent = await agentSvc.create(companyId, {
@@ -313,25 +293,7 @@ export function governanceOrgService(db: Db) {
           permissions: def.permissions,
           status: "idle",
         });
-      } else {
-        await agentSvc.update(agent.id, {
-          title: def.title,
-          reportsTo: ceoAgent.id,
-          budgetMonthlyCents: def.budgetMonthlyCents,
-          permissions: def.permissions,
-        });
       }
-
-      await instructionsSvc.materializeManagedBundle(
-        {
-          id: agent.id,
-          companyId,
-          name: agent.name,
-          adapterConfig: agent.adapterConfig,
-        },
-        { "AGENTS.md": prompt },
-        { replaceExisting: true },
-      );
 
       createdAgentMap[role] = agent;
     }
