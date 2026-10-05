@@ -3,7 +3,6 @@ import {
   Search,
   Settings,
   Users,
-  TrendingUp,
   History,
   FolderKanban,
 } from "lucide-react";
@@ -44,7 +43,6 @@ export function Sidebar({ children }: { children?: ReactNode }) {
         {/* Core Operations */}
         <div className={primarySidebarStyles.group}>
           <SidebarNavItem to="/governance" label="Project Governance" icon={FolderKanban} />
-          <SidebarNavItem to="/sales" label="Sales Hub" icon={TrendingUp} />
           <SidebarNavItem
             to="/inbox"
             label="Approvals & Inbox"
