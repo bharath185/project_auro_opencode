@@ -44,8 +44,8 @@ export interface GovernanceDocumentDefinition {
   kind: GovernanceDocumentKind;
   title: string;
   fileName: string;
-  authorRole: "ceo" | "cto" | "pm" | "qa" | "devops" | "security";
-  reviewerRoles: Array<"ceo" | "cto" | "pm" | "qa" | "devops" | "security">;
+  authorRole: "ceo" | "cto" | "pm";
+  reviewerRoles: Array<"ceo" | "cto" | "pm">;
   requiredSections: DocumentSectionRequirement[];
   templateGenerator: (context: GovernanceProjectContext) => string;
 }
@@ -75,7 +75,7 @@ export interface DocumentVersion {
 
 export interface DocumentReview {
   id: string;
-  reviewerRole: "ceo" | "cto" | "pm" | "qa" | "devops" | "security";
+  reviewerRole: "ceo" | "cto" | "pm";
   status: "approved" | "changes_requested" | "pending";
   comments: string;
   createdAt: string;
@@ -137,7 +137,7 @@ ${ctx.problem}
     title: "Product Requirements Document (PRD)",
     fileName: "PRD.md",
     authorRole: "pm",
-    reviewerRoles: ["ceo", "qa", "cto"],
+    reviewerRoles: ["ceo", "cto"],
     requiredSections: [
       { id: "overview", heading: "Product Overview", aliases: ["Product Overview", "Overview"], description: "Product concept and vision" },
       { id: "user_journeys", heading: "User Journeys & Use Cases", aliases: ["User Journeys", "Use Cases", "User Journeys & Use Cases"], description: "Step-by-step user workflows" },
@@ -165,7 +165,7 @@ ${isSaree ? `- **FR-1 (Catalog & Media)**: High-resolution multi-angle image gal
 - **FR-2 (Customization Engine)**: Interactive blouse tailoring measurement capture (bust, waist, sleeve, neck) and fall/pico service add-ons.
 - **FR-3 (Payment Gateways)**: Razorpay integration for domestic UPI/Netbanking/COD and Stripe for international multi-currency transactions.
 - **FR-4 (Automated Logistics)**: Shiprocket API integration for real-time shipping rates and automated AWB generation.` : `- **FR-1 (Kickoff)**: Capture project metadata, team skills (${ctx.teamSkills || "N/A"}), and constraints.
-- **FR-2 (Orchestration)**: CEO delegates workstreams to CTO, PM, QA, DevOps, and Security.
+- **FR-2 (Orchestration)**: CEO delegates workstreams to CTO and PM.
 - **FR-3 (Document Generation)**: Produce all 12 validated governance artifacts.`}
 
 ## Non-Functional Requirements
@@ -186,7 +186,7 @@ ${isSaree ? `- **FR-1 (Catalog & Media)**: High-resolution multi-angle image gal
     title: "System Architecture & ADRs",
     fileName: "ARCHITECTURE.md",
     authorRole: "cto",
-    reviewerRoles: ["security", "devops", "ceo"],
+    reviewerRoles: ["ceo", "pm"],
     requiredSections: [
       { id: "arch_overview", heading: "Architecture Overview", aliases: ["Architecture Overview", "System Overview"], description: "High-level topology" },
       { id: "mermaid_diagram", heading: "System Component Diagram (Mermaid)", aliases: ["System Component Diagram", "Mermaid Diagram", "Component Diagram"], description: "Mermaid architecture diagram" },
@@ -198,7 +198,7 @@ ${isSaree ? `- **FR-1 (Catalog & Media)**: High-resolution multi-angle image gal
       return `# System Architecture & ADRs: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 ## Architecture Overview
-The system architecture is structured around high-performance API services, edge CDN media caching, relational PostgreSQL persistence, and asynchronous worker queues.
+The system architecture is structured around high-performance Next.js API services, edge CDN media caching, relational PostgreSQL persistence, and asynchronous worker queues.
 
 ## System Component Diagram (Mermaid)
 \`\`\`mermaid
@@ -239,7 +239,7 @@ flowchart TD
     title: "Technology Stack & Justification",
     fileName: "TECH_STACK.md",
     authorRole: "cto",
-    reviewerRoles: ["devops", "pm"],
+    reviewerRoles: ["pm", "ceo"],
     requiredSections: [
       { id: "stack_summary", heading: "Stack Summary Matrix", aliases: ["Stack Summary Matrix", "Stack Summary", "Technology Stack"], description: "Table of technologies by layer" },
       { id: "frontend_backend", heading: "Frontend & Backend Rationale", aliases: ["Frontend & Backend Rationale", "Frontend and Backend"], description: "Framework and language selection" },
@@ -276,7 +276,7 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     title: "Database Schema (ER) & OpenAPI Specification",
     fileName: "DB_OPENAPI.md",
     authorRole: "cto",
-    reviewerRoles: ["devops", "security"],
+    reviewerRoles: ["pm", "ceo"],
     requiredSections: [
       { id: "er_diagram", heading: "Entity-Relationship (ER) Diagram (Mermaid)", aliases: ["Entity-Relationship Diagram", "ER Diagram", "Entity-Relationship (ER) Diagram (Mermaid)"], description: "Mermaid ER diagram" },
       { id: "data_dictionary", heading: "Data Dictionary & Tables", aliases: ["Data Dictionary & Tables", "Data Dictionary", "Table Definitions"], description: "Field specifications and constraints" },
@@ -398,7 +398,7 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 
 ## Resource Requirements & Capacity
 - Budget: ${ctx.budget || "$25,000 - $50,000"}
-- Team: 1 Lead Architect, 2 Frontend Engineers, 1 Backend Engineer, 1 QA Specialist.
+- Team: 1 Lead Architect (CTO), 2 Frontend Engineers, 1 Backend Engineer, 1 Product Manager (PM).
 `,
   },
 
@@ -407,7 +407,7 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     title: "Sprint Plan & Backlog Breakdown",
     fileName: "SPRINT_PLAN.md",
     authorRole: "pm",
-    reviewerRoles: ["cto", "qa"],
+    reviewerRoles: ["cto", "ceo"],
     requiredSections: [
       { id: "sprint_cadence", heading: "Sprint Cadence & Ceremonies", aliases: ["Sprint Cadence & Ceremonies", "Sprint Cadence", "Ceremonies"], description: "Sprint length and rituals" },
       { id: "backlog_epics", heading: "Backlog Structure & Epics", aliases: ["Backlog Structure & Epics", "Backlog Epics", "Epics"], description: "Epics and user stories" },
@@ -446,19 +446,16 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     templateGenerator: (ctx) => `# Team Allocation & Capacity Sheet: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 ## Team Structure & Key Roles
-- **CEO**: Strategic oversight and business milestone validation.
-- **CTO / Lead Architect**: System architecture, database integrity, and third-party integrations.
-- **Lead Frontend Engineer**: Next.js 15 UI, tailoring configurator, and mobile responsiveness.
-- **Lead Backend Engineer**: API routes, payment gateway webhooks, and courier dispatch.
-- **QA Automation Lead**: Automated test suites and regression testing.
+- **CEO**: Strategic oversight, business model execution, and milestone sign-off.
+- **CTO**: System architecture, database schema, API security, and tech stack orchestration.
+- **PM**: Product requirements, sprint backlog, user story breakdown, and QA acceptance.
 
 ## Capacity & Allocation Matrix
 | Role | Headcount | Allocation | Focus Area |
 |---|---|---|---|
-| Lead Architect / CTO | 1 | 100% | Architecture, DB, Security |
-| Frontend Engineers | 2 | 100% | Storefront, Customization UI |
-| Backend Engineer | 1 | 100% | Payments, Orders, Logistics |
-| QA Engineer | 1 | 100% | Automated Test Suites |
+| CEO | 1 | 100% | Executive Strategy & Governance |
+| CTO / Lead Architect | 1 | 100% | Architecture, DB, Security & APIs |
+| Product Manager | 1 | 100% | PRD, Sprint Stories & QA Sign-Off |
 
 ## Skill Requirements & Gaps
 - React 19 / Next.js 15 App Router, TypeScript, PostgreSQL, Drizzle ORM, Razorpay SDK, Shiprocket API.
@@ -469,8 +466,8 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     kind: "test_strategy",
     title: "Test Strategy & QA Checklist",
     fileName: "TEST_STRATEGY.md",
-    authorRole: "qa",
-    reviewerRoles: ["cto", "devops"],
+    authorRole: "pm",
+    reviewerRoles: ["cto", "ceo"],
     requiredSections: [
       { id: "testing_levels", heading: "Testing Levels & Scope", aliases: ["Testing Levels & Scope", "Testing Levels", "Scope of Testing"], description: "Unit, integration, E2E" },
       { id: "qa_checklist", heading: "Pre-Release QA Checklist", aliases: ["Pre-Release QA Checklist", "QA Checklist", "Release Checklist"], description: "Verification checklist" },
@@ -498,8 +495,8 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     kind: "cicd_infra",
     title: "CI/CD Pipeline & Infrastructure Spec",
     fileName: "INFRA_SPEC.md",
-    authorRole: "devops",
-    reviewerRoles: ["cto", "security"],
+    authorRole: "cto",
+    reviewerRoles: ["pm", "ceo"],
     requiredSections: [
       { id: "infra_topology", heading: "Infrastructure Topology & Cloud Providers", aliases: ["Infrastructure Topology & Cloud Providers", "Infrastructure Topology", "Cloud Providers"], description: "Server and cloud spec" },
       { id: "cicd_pipeline", heading: "CI/CD Pipeline Architecture", aliases: ["CI/CD Pipeline Architecture", "CI/CD Pipeline", "Pipeline"], description: "Deployment workflows" },
@@ -525,8 +522,8 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     kind: "threat_model",
     title: "Threat Model & Security Requirements",
     fileName: "THREAT_MODEL.md",
-    authorRole: "security",
-    reviewerRoles: ["cto", "ceo"],
+    authorRole: "cto",
+    reviewerRoles: ["ceo", "pm"],
     requiredSections: [
       { id: "threat_surface", heading: "Attack Surface & Threat Modeling (STRIDE)", aliases: ["Attack Surface & Threat Modeling (STRIDE)", "Threat Surface", "STRIDE Model"], description: "STRIDE analysis" },
       { id: "security_controls", heading: "Security Controls & Data Protection", aliases: ["Security Controls & Data Protection", "Security Controls", "Data Protection"], description: "Encryption and authentication" },
@@ -570,13 +567,13 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 | R-03 | Courier dispatch delays during peak seasons | Medium | Multi-carrier load balancing across Shiprocket and Delhivery |
 
 ## RACI Governance Matrix
-| Milestone / Deliverable | CEO | CTO | PM | QA | DevOps | Security |
-|---|---|---|---|---|---|---|
-| Charter & Business Model | **A/R** | C | C | I | I | I |
-| System Architecture & DB | I | **A/R** | C | C | C | C |
-| Product PRD & Sprints | I | C | **A/R** | C | I | I |
-| Test Suites & Quality Sign-Off | I | C | C | **A/R** | I | I |
-| Infrastructure & Deployment | I | C | I | I | **A/R** | C |
+| Milestone / Deliverable | CEO | CTO | PM |
+|---|---|---|---|
+| Charter & Business Model | **A/R** | C | C |
+| System Architecture & DB | I | **A/R** | C |
+| Product PRD & Sprints | I | C | **A/R** |
+| Test Strategy & QA Checklist | I | C | **A/R** |
+| Infrastructure & Security | C | **A/R** | C |
 
 ## Compliance, Audit & Governance Sign-Off
 - Signed off by CEO and CTO. All changes logged to immutable audit trail.
@@ -601,7 +598,7 @@ export function validateGovernanceDocument(
 
   const lines = content.split("\n");
   const headings = lines
-    .filter((l) => l.trim().startsWith("#"))
+    .filter((l) => l.trim().startsWith("##"))
     .map((l) => l.replace(/^#+\s*/, "").trim().toLowerCase());
 
   for (const req of definition.requiredSections) {

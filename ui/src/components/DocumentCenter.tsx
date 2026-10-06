@@ -85,7 +85,7 @@ export function DocumentCenter({ companyId, projectId }: DocumentCenterProps) {
   const [showHandoffGuide, setShowHandoffGuide] = useState(false);
 
   // New review form
-  const [reviewerRole, setReviewerRole] = useState("qa");
+  const [reviewerRole, setReviewerRole] = useState("cto");
   const [reviewStatus, setReviewStatus] = useState<"approved" | "changes_requested">("approved");
   const [reviewComments, setReviewComments] = useState("");
 
@@ -659,12 +659,9 @@ export function DocumentCenter({ companyId, projectId }: DocumentCenterProps) {
                           onChange={(e) => setReviewerRole(e.target.value)}
                           className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground"
                         >
-                          <option value="ceo">CEO</option>
-                          <option value="cto">CTO</option>
-                          <option value="pm">Product Manager</option>
-                          <option value="qa">QA Lead</option>
-                          <option value="devops">DevOps Engineer</option>
-                          <option value="security">Security Officer</option>
+                          <option value="ceo">CEO (Chief Executive Officer)</option>
+                          <option value="cto">CTO (Chief Technology Officer)</option>
+                          <option value="pm">PM (Product Manager)</option>
                         </select>
                       </div>
 

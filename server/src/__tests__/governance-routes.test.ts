@@ -8,7 +8,7 @@ describe("Governance Routes & Document Center API", () => {
   let app: express.Express;
   const companyId = "company-governance-test-123";
 
-  beforeEach(() => {
+  beforeEach(async () => {
     app = express();
     app.use(express.json());
     app.use((req, _res, next) => {
@@ -18,32 +18,44 @@ describe("Governance Routes & Document Center API", () => {
     });
     app.use(governanceRoutes({} as any));
     app.use(errorHandler);
+
+    // Initialize test project
+    await request(app)
+      .post("/governance/projects")
+      .send({
+        name: "Test Governance Project",
+        domain: "Enterprise Platform",
+        problem: "Need autonomous AI agent project kickoff and document pack generation.",
+        targetUsers: "Enterprise development teams",
+        goals: "Ship complete 12-document governance pack with cross-reviews.",
+      });
   });
 
-  it("GET /governance/prompts returns all 6 role prompts", async () => {
+  it("GET /governance/prompts returns all 3 C-Suite role prompts", async () => {
     const res = await request(app).get("/governance/prompts");
     expect(res.status).toBe(200);
-    expect(Object.keys(res.body)).toEqual(["ceo", "cto", "pm", "qa", "devops", "security"]);
-    expect(res.body.ceo.title).toBe("Chief Executive Officer");
-    expect(res.body.cto.title).toBe("Chief Technology Officer");
+    expect(Object.keys(res.body)).toEqual(["ceo", "cto", "pm"]);
+    expect(res.body.ceo.title).toContain("Chief Executive Officer");
+    expect(res.body.cto.title).toContain("Chief Technology Officer");
+    expect(res.body.pm.title).toContain("Product Manager");
   });
 
   it("GET /governance/prompts/:role returns single role prompt", async () => {
     const res = await request(app).get("/governance/prompts/cto");
     expect(res.status).toBe(200);
     expect(res.body.role).toBe("cto");
-    expect(res.body.content).toContain("Chief Technology Officer");
+    expect(res.body.content).toContain("CTO");
   });
 
   it("PUT /governance/prompts/:role validates prompt updates", async () => {
     const emptyRes = await request(app)
-      .put("/governance/prompts/qa")
+      .put("/governance/prompts/cto")
       .send({ content: "" });
     expect(emptyRes.status).toBe(400);
 
     const validRes = await request(app)
-      .put("/governance/prompts/qa")
-      .send({ content: "# QA Lead System Prompt\n\nQuality Assurance Lead prompt." });
+      .put("/governance/prompts/cto")
+      .send({ content: "# CTO System Prompt\n\nChief Technology Officer system prompt." });
     expect(validRes.status).toBe(200);
     expect(validRes.body.success).toBe(true);
   });
@@ -109,19 +121,24 @@ Updated product vision.
     const res = await request(app)
       .post("/governance/documents/prd/review")
       .send({
-        reviewerRole: "qa",
+        reviewerRole: "cto",
         status: "approved",
-        comments: "All acceptance criteria verified and approved by QA Lead.",
+        comments: "All acceptance criteria verified and approved by CTO.",
       });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    expect(res.body.review.reviewerRole).toBe("qa");
+    expect(res.body.review.reviewerRole).toBe("cto");
     expect(res.body.reviews.length).toBeGreaterThanOrEqual(1);
   });
 
   it("POST /governance/pack/approve executes CEO approval gate", async () => {
-    // 1. If pack has incomplete document, it rejects with 422
+    // 1. Make PRD incomplete to verify CEO gate blocks approval
+    await request(app)
+      .put("/governance/documents/prd")
+      .send({ content: "# Incomplete PRD\n## Overview\nOnly draft.", changeSummary: "Draft edit" });
+
+    // Pack has incomplete document, so it rejects with 422
     const rejectRes = await request(app).post("/governance/pack/approve");
     expect(rejectRes.status).toBe(422);
     expect(rejectRes.body.error || rejectRes.body.message || rejectRes.text).toContain("incomplete documents");
@@ -213,6 +230,15 @@ Complete product vision.
       });
       allowedApp.use(governanceRoutes({} as any));
       allowedApp.use(errorHandler);
+
+      await request(allowedApp)
+        .post(`/companies/${companyId}/governance/projects`)
+        .send({
+          name: "Test Governance Project",
+          problem: "Need autonomous AI agent project kickoff",
+          targetUsers: "Enterprise development teams",
+          goals: "Ship complete 12-document governance pack",
+        });
 
       const res = await request(allowedApp).get(`/companies/${companyId}/governance/documents`);
       expect(res.status).toBe(200);

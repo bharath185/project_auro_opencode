@@ -102,7 +102,7 @@ Controls here.
 `;
     const result = validateGovernanceDocument("threat_model", incompleteThreat);
     expect(result.valid).toBe(false);
-    expect(result.missingSections).toContain("STRIDE Threat Analysis");
+    expect(result.missingSections).toContain("Attack Surface & Threat Modeling (STRIDE)");
   });
 
   it("rejects invalid/unknown document kind", () => {

@@ -178,7 +178,33 @@ function buildProjectRecord(
   const docsMap: any = {};
   for (const kind of GOVERNANCE_DOCUMENT_KINDS) {
     const def = GOVERNANCE_DOC_DEFINITIONS[kind];
-    const rawContent = params.customDocuments?.[kind]?.content || rawPack?.[kind]?.content || "";
+    const customDoc = params.customDocuments?.[kind];
+    let rawContent = "";
+
+    if (typeof customDoc === "string") {
+      rawContent = customDoc;
+    } else if (customDoc?.content) {
+      rawContent = customDoc.content;
+    } else if (customDoc?.versions && Array.isArray(customDoc.versions) && customDoc.versions.length > 0) {
+      rawContent = customDoc.versions[customDoc.versions.length - 1]?.content || customDoc.versions[0]?.content || "";
+    } else if (rawPack?.[kind]?.content) {
+      rawContent = rawPack[kind].content;
+    }
+
+    if (!rawContent || !rawContent.trim()) {
+      rawContent = def.templateGenerator({
+        projectName: params.name,
+        problem: params.problem,
+        targetUsers: params.targetUsers,
+        goals: params.goals,
+        constraints: params.constraints,
+        budget: budgetStr,
+        deadline: params.deadline,
+        preferredStack: params.preferredStack,
+        isDemo: params.isDemo ?? false,
+      });
+    }
+
     docsMap[kind] = {
       kind,
       title: def.title,
