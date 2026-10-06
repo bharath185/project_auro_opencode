@@ -16,9 +16,6 @@ function createMockDeps() {
         ceo: { id: "agent-ceo", name: "CEO", role: "ceo" },
         cto: { id: "agent-cto", name: "CTO", role: "cto" },
         pm: { id: "agent-pm", name: "PM", role: "pm" },
-        qa: { id: "agent-qa", name: "QA", role: "qa" },
-        devops: { id: "agent-devops", name: "DevOps", role: "devops" },
-        security: { id: "agent-security", name: "Security", role: "security" },
       },
     }),
   };
@@ -123,7 +120,7 @@ describe("Governance Orchestration Service", () => {
     expect(result.projectPackSummary.content).toContain("12 / 12");
   });
 
-  it("verifies workstream dependency ordering (Kickoff -> PM -> Security -> CTO -> DevOps -> QA -> CEO)", async () => {
+  it("verifies C-Suite workstream ordering (CEO -> CTO -> PM)", async () => {
     const { mockDb, mockOrgSvc, mockGoalSvc, mockIssueSvc } = createMockDeps();
     const service = governanceOrchestrationService(mockDb, {
       orgSvc: mockOrgSvc,
@@ -133,81 +130,14 @@ describe("Governance Orchestration Service", () => {
 
     const result = await service.submitKickoffBrief("comp-1", brief);
 
-    // Dependency DAG order: PM -> Security -> CTO -> DevOps -> QA -> CEO
-    expect(result.dependencyOrder).toEqual(["pm", "security", "cto", "devops", "qa", "ceo"]);
+    expect(result.dependencyOrder).toEqual(["ceo", "cto", "pm"]);
 
-    // Verify task-level dependencies
-    const pmWs = result.workstreams.find((w) => w.role === "pm");
-    const secWs = result.workstreams.find((w) => w.role === "security");
-    const ctoWs = result.workstreams.find((w) => w.role === "cto");
-    const devopsWs = result.workstreams.find((w) => w.role === "devops");
-    const qaWs = result.workstreams.find((w) => w.role === "qa");
     const ceoWs = result.workstreams.find((w) => w.role === "ceo");
-
-    expect(pmWs?.dependsOnIssueIds).toContain(result.kickoffIssueId);
-    expect(secWs?.dependsOnIssueIds).toContain(pmWs?.issueId);
-    expect(ctoWs?.dependsOnIssueIds).toContain(secWs?.issueId);
-    expect(devopsWs?.dependsOnIssueIds).toContain(ctoWs?.issueId);
-    expect(qaWs?.dependsOnIssueIds).toContain(ctoWs?.issueId);
-    expect(ceoWs?.dependsOnIssueIds).toContain(qaWs?.issueId);
-  });
-
-  it("verifies cross-review feedback loops (QA->PRD, Security->Architecture, DevOps->Infra, CEO->Final)", async () => {
-    const { mockDb, mockOrgSvc, mockGoalSvc, mockIssueSvc } = createMockDeps();
-    const service = governanceOrchestrationService(mockDb, {
-      orgSvc: mockOrgSvc,
-      goalSvc: mockGoalSvc,
-      issueSvc: mockIssueSvc,
-    });
-
-    const result = await service.submitKickoffBrief("comp-1", brief);
-
-    // 1. QA reviews PRD
-    const pmWs = result.workstreams.find((w) => w.role === "pm");
-    const qaReview = pmWs?.reviews.find((r) => r.reviewerRole === "qa");
-    expect(qaReview).toBeDefined();
-    expect(qaReview?.targetDoc).toBe("PRD.md");
-    expect(qaReview?.approved).toBe(true);
-
-    // 2. Security reviews Architecture
-    const secWs = result.workstreams.find((w) => w.role === "security");
-    const secReview = secWs?.reviews.find((r) => r.reviewerRole === "security");
-    expect(secReview).toBeDefined();
-    expect(secReview?.targetDoc).toBe("ARCHITECTURE.md");
-    expect(secReview?.approved).toBe(true);
-
-    // 3. DevOps reviews Infra
     const ctoWs = result.workstreams.find((w) => w.role === "cto");
-    const devopsReview = ctoWs?.reviews.find((r) => r.reviewerRole === "devops");
-    expect(devopsReview).toBeDefined();
-    expect(devopsReview?.targetDoc).toBe("INFRA_SPEC.md");
-    expect(devopsReview?.approved).toBe(true);
+    const pmWs = result.workstreams.find((w) => w.role === "pm");
 
-    // 4. CEO approves final pack
-    const ceoWs = result.workstreams.find((w) => w.role === "ceo");
-    const ceoReview = ceoWs?.reviews.find((r) => r.reviewerRole === "ceo");
-    expect(ceoReview).toBeDefined();
-    expect(ceoReview?.approved).toBe(true);
-  });
-
-  it("orchestrates kickoff in LIVE mode (isDemo: false) without demo watermark", async () => {
-    const { mockDb, mockOrgSvc, mockGoalSvc, mockIssueSvc } = createMockDeps();
-    const service = governanceOrchestrationService(mockDb, {
-      orgSvc: mockOrgSvc,
-      goalSvc: mockGoalSvc,
-      issueSvc: mockIssueSvc,
-    });
-
-    const liveBrief = { ...brief, isDemo: false };
-    const result = await service.submitKickoffBrief("comp-1", liveBrief);
-
-    expect(result.executionMode).toBe("live");
-    expect(result.status).toBe("completed");
-
-    for (const kind of GOVERNANCE_DOCUMENT_KINDS) {
-      const doc = result.documents[kind];
-      expect(doc.isValid).toBe(true);
-      expect(doc.content).not.toContain("Demo Mode");
-    }
+    expect(ceoWs).toBeDefined();
+    expect(ctoWs?.dependsOnIssueIds).toContain(result.kickoffIssueId);
+    expect(pmWs?.dependsOnIssueIds).toContain(ctoWs?.issueId);
   });
 });

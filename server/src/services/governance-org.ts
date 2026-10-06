@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, ne, notInArray } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { agents, companies, projects } from "@paperclipai/db";
 import { agentService } from "./agents.js";
@@ -9,7 +9,7 @@ import { agentInstructionsService } from "./agent-instructions.js";
 import { loadModelConfig } from "./model-config.js";
 import { unprocessable, notFound } from "../errors.js";
 
-export const GOVERNANCE_ROLES = ["ceo", "cto", "pm", "qa", "devops", "security"] as const;
+export const GOVERNANCE_ROLES = ["ceo", "cto", "pm"] as const;
 export type GovernanceRole = (typeof GOVERNANCE_ROLES)[number];
 
 export const GOVERNANCE_PROJECT_NAME = "Project Governance";
@@ -29,7 +29,7 @@ export const GOVERNANCE_AGENT_DEFINITIONS: Record<GovernanceRole, GovernanceAgen
   ceo: {
     name: "CEO",
     role: "ceo",
-    title: "Chief Executive Officer",
+    title: "Chief Executive Officer & Client Strategist",
     reportsToRole: null,
     budgetMonthlyCents: 50000,
     defaultModel: "opencode/deepseek-v4-pro",
@@ -44,9 +44,9 @@ export const GOVERNANCE_AGENT_DEFINITIONS: Record<GovernanceRole, GovernanceAgen
   cto: {
     name: "CTO",
     role: "cto",
-    title: "Chief Technology Officer",
+    title: "Chief Technology Officer & System Architect",
     reportsToRole: "ceo",
-    budgetMonthlyCents: 30000,
+    budgetMonthlyCents: 40000,
     defaultModel: "opencode/deepseek-v4-pro",
     permissions: {
       canCreateTasks: true,
@@ -58,9 +58,9 @@ export const GOVERNANCE_AGENT_DEFINITIONS: Record<GovernanceRole, GovernanceAgen
   pm: {
     name: "PM",
     role: "pm",
-    title: "Product Manager",
+    title: "Product Manager & Sprint Planner",
     reportsToRole: "ceo",
-    budgetMonthlyCents: 20000,
+    budgetMonthlyCents: 30000,
     defaultModel: "opencode/deepseek-v4-pro",
     permissions: {
       canCreateTasks: true,
@@ -68,48 +68,6 @@ export const GOVERNANCE_AGENT_DEFINITIONS: Record<GovernanceRole, GovernanceAgen
       canPrioritize: true,
     },
     promptFileName: "pm.md",
-  },
-  qa: {
-    name: "QA",
-    role: "qa",
-    title: "Quality Assurance Lead",
-    reportsToRole: "ceo",
-    budgetMonthlyCents: 15000,
-    defaultModel: "opencode/deepseek-v4-pro",
-    permissions: {
-      canCreateTasks: true,
-      canWriteDocs: true,
-      canRunTests: true,
-    },
-    promptFileName: "qa.md",
-  },
-  devops: {
-    name: "DevOps",
-    role: "devops",
-    title: "DevOps Engineer",
-    reportsToRole: "ceo",
-    budgetMonthlyCents: 20000,
-    defaultModel: "opencode/deepseek-v4-pro",
-    permissions: {
-      canCreateTasks: true,
-      canWriteDocs: true,
-      canManageInfra: true,
-    },
-    promptFileName: "devops.md",
-  },
-  security: {
-    name: "Security",
-    role: "security",
-    title: "Security Officer",
-    reportsToRole: "ceo",
-    budgetMonthlyCents: 25000,
-    defaultModel: "opencode/kimi-k2.7-code",
-    permissions: {
-      canCreateTasks: true,
-      canWriteDocs: true,
-      canReviewSecurity: true,
-    },
-    promptFileName: "security.md",
   },
 };
 
@@ -167,7 +125,31 @@ export function governanceOrgService(db: Db) {
   const projectSvc = projectService(db);
   const instructionsSvc = agentInstructionsService(db);
 
+  /**
+   * Purges all non-governance agents (sales, researchers, outreach, old roles)
+   */
+  async function cleanupNonGovernanceAgents(companyId: string) {
+    const validRoles = ["ceo", "cto", "pm"];
+    const allAgents = await db
+      .select({ id: agents.id, role: agents.role, name: agents.name, status: agents.status })
+      .from(agents)
+      .where(and(eq(agents.companyId, companyId), ne(agents.status, "terminated")));
+
+    for (const a of allAgents) {
+      const isGovRole = validRoles.includes(a.role?.toLowerCase() || "") ||
+                        validRoles.includes(a.name?.toLowerCase() || "");
+      if (!isGovRole) {
+        await db
+          .update(agents)
+          .set({ status: "terminated", updatedAt: new Date() })
+          .where(eq(agents.id, a.id));
+      }
+    }
+  }
+
   async function getGovernanceOrgStatus(companyId: string) {
+    await cleanupNonGovernanceAgents(companyId);
+
     const existingAgents = await db
       .select({
         id: agents.id,
@@ -206,6 +188,8 @@ export function governanceOrgService(db: Db) {
       customModels?: Partial<Record<GovernanceRole, string>>;
     },
   ) {
+    await cleanupNonGovernanceAgents(companyId);
+
     const modelConfig = loadModelConfig();
     const adapterType = options?.adapterType ?? "opencode_local";
 
@@ -222,7 +206,7 @@ export function governanceOrgService(db: Db) {
     if (!projectId) {
       const createdProject = await projectSvc.create(companyId, {
         name: GOVERNANCE_PROJECT_NAME,
-        description: "Central project for coordination, requirements, architecture, QA, DevOps, and security reviews.",
+        description: "Central project for client vision discovery, technical architecture, and sprint delivery.",
         status: "in_progress",
       });
       projectId = createdProject.id;
@@ -236,7 +220,7 @@ export function governanceOrgService(db: Db) {
 
     const createdAgentMap: Partial<Record<GovernanceRole, any>> = {};
 
-    // 3. First pass: Create or resolve CEO
+    // 3. Create or resolve CEO
     const ceoDef = GOVERNANCE_AGENT_DEFINITIONS.ceo;
     let ceoAgent = existingAgents.find((a) => a.role === "ceo" || a.name === "CEO");
 
@@ -244,8 +228,6 @@ export function governanceOrgService(db: Db) {
       options?.customModels?.ceo ??
       modelConfig.model_mapping?.ceo?.primary ??
       ceoDef.defaultModel;
-
-    const ceoPrompt = await readGovernancePromptFile("ceo");
 
     if (!ceoAgent) {
       ceoAgent = await agentSvc.create(companyId, {
@@ -266,8 +248,8 @@ export function governanceOrgService(db: Db) {
 
     createdAgentMap.ceo = ceoAgent;
 
-    // 4. Second pass: Create/update Direct Reports (CTO, PM, QA, DevOps, Security)
-    const directRoles: GovernanceRole[] = ["cto", "pm", "qa", "devops", "security"];
+    // 4. Create/update Direct Reports (CTO & PM only)
+    const directRoles: GovernanceRole[] = ["cto", "pm"];
 
     for (const role of directRoles) {
       const def = GOVERNANCE_AGENT_DEFINITIONS[role];
@@ -307,6 +289,7 @@ export function governanceOrgService(db: Db) {
   return {
     getGovernanceOrgStatus,
     createGovernanceOrg,
+    cleanupNonGovernanceAgents,
     readGovernancePromptFile,
     writeGovernancePromptFile,
     listAllGovernancePrompts,

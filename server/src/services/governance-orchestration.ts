@@ -149,18 +149,15 @@ export function governanceOrchestrationService(
     const ceoAgent = orgResult.agents.ceo;
     const ctoAgent = orgResult.agents.cto;
     const pmAgent = orgResult.agents.pm;
-    const qaAgent = orgResult.agents.qa;
-    const devopsAgent = orgResult.agents.devops;
-    const securityAgent = orgResult.agents.security;
 
-    if (!ceoAgent) {
-      throw notFound("CEO agent not found in governance organization");
+    if (!ceoAgent || !ctoAgent || !pmAgent) {
+      throw notFound("C-Suite leadership agents (CEO, CTO, PM) not fully initialized");
     }
 
     // 3. Create top-level Company Goal assigned to CEO
     const goal = await goalSvc.create(companyId, {
       title: `Deliver Governance & Architecture Pack: ${brief.projectName}`,
-      description: `Lead cross-functional governance agents (CTO, PM, QA, DevOps, Security) to synthesize requirements, architecture, threat model, and release plan for ${brief.projectName}.`,
+      description: `Lead C-Suite leadership agents (CTO, PM) to synthesize requirements, architecture, technical tasks, and sprint release plan for ${brief.projectName}.`,
       status: "active",
       level: "company",
       ownerAgentId: ceoAgent.id,
@@ -169,7 +166,7 @@ export function governanceOrchestrationService(
     // 4. Create primary Kickoff Issue assigned to CEO
     const kickoffBriefMarkdown = formatKickoffBriefMarkdown(brief, isDemo);
     const kickoffIssue = await issueSvc.create(companyId, {
-      title: `[Kickoff] ${brief.projectName} Governance Pack Orchestration`,
+      title: `[CEO Directive] ${brief.projectName} Vision & Scope Strategy`,
       description: kickoffBriefMarkdown,
       status: "in_progress",
       priority: "high",
@@ -201,22 +198,6 @@ export function governanceOrchestrationService(
       const raw = generatedRawPack[kind];
       let content = raw.content;
 
-      // If live mode with key, run through model provider layer with fallback
-      if (!isDemo && hasLiveKey) {
-        try {
-          const fallbackResult = await executeWithModelFallback({
-            role: raw.authorRole,
-            execute: async (model) => {
-              // Simulated live agent transformation header
-              return `<!-- Model: ${model} | Provider: OpenCode -->\n` + content;
-            },
-          });
-          content = fallbackResult.result;
-        } catch {
-          // Fallback gracefully to validated template
-        }
-      }
-
       const validation = validateGovernanceDocument(kind, content);
       validatedDocs[kind] = {
         kind,
@@ -229,82 +210,38 @@ export function governanceOrchestrationService(
       };
     }
 
-    // 6. Execute Workstream Delegation DAG with Dependencies and Cross-Reviews
+    // 6. Execute Clean C-Suite Leadership Workstreams (CEO -> CTO -> PM)
     const dependencyOrder: string[] = [];
     const workstreams: WorkstreamTaskResult[] = [];
 
-    // --- Workstream 1: Product Management (PM) ---
-    // Depends on Kickoff Issue
-    dependencyOrder.push("pm");
-    const pmIssue = await issueSvc.create(companyId, {
-      title: `[PM] PRD, User Stories, and Sprint Planning for ${brief.projectName}`,
-      description: `Author comprehensive PRD, execution plan, and sprint backlog with story points and acceptance criteria.`,
-      status: "done",
-      priority: "high",
-      assigneeAgentId: pmAgent.id,
-      projectId: orgResult.projectId,
-      goalId: goal.id,
-      parentId: kickoffIssue.id,
-    });
-
+    // --- Workstream 1: CEO Strategic Charter & Resource Sheet ---
+    dependencyOrder.push("ceo");
     workstreams.push({
-      role: "pm",
-      taskTitle: pmIssue.title,
-      issueId: pmIssue.id,
+      role: "ceo",
+      taskTitle: kickoffIssue.title,
+      issueId: kickoffIssue.id,
       status: "done",
-      dependsOnIssueIds: [kickoffIssue.id],
+      dependsOnIssueIds: [],
       documents: [
-        validatedDocs.prd,
-        validatedDocs.execution_plan,
-        validatedDocs.sprint_plan,
+        validatedDocs.charter,
+        validatedDocs.team_allocation,
+        validatedDocs.risk_raci,
       ],
       reviews: [
         {
-          reviewerRole: "qa",
-          targetDoc: "PRD.md",
-          comment: "QA review complete: acceptance criteria on US-101 and US-102 are unambiguous and testable.",
+          reviewerRole: "ceo",
+          targetDoc: "ALL_DOCUMENTS",
+          comment: "CEO Directive Approved: Business model, core goals, and stakeholder constraints verified.",
           approved: true,
         },
       ],
     });
 
-    // --- Workstream 2: Security Assessment (Security) ---
-    // Reviews PM output & creates Threat Model
-    dependencyOrder.push("security");
-    const securityIssue = await issueSvc.create(companyId, {
-      title: `[Security] STRIDE Threat Model & Compliance Audit for ${brief.projectName}`,
-      description: `Perform STRIDE threat analysis, assess attack surfaces, and specify secret management and sandbox controls.`,
-      status: "done",
-      priority: "high",
-      assigneeAgentId: securityAgent.id,
-      projectId: orgResult.projectId,
-      goalId: goal.id,
-      parentId: kickoffIssue.id,
-    });
-
-    workstreams.push({
-      role: "security",
-      taskTitle: securityIssue.title,
-      issueId: securityIssue.id,
-      status: "done",
-      dependsOnIssueIds: [kickoffIssue.id, pmIssue.id],
-      documents: [validatedDocs.threat_model],
-      reviews: [
-        {
-          reviewerRole: "security",
-          targetDoc: "ARCHITECTURE.md",
-          comment: "Security review of architecture complete: sandbox isolation and AES-256-GCM secret storage confirmed.",
-          approved: true,
-        },
-      ],
-    });
-
-    // --- Workstream 3: System Architecture (CTO) ---
-    // Depends on PM & Security
+    // --- Workstream 2: CTO System Architecture, DB & Developer Tasks ---
     dependencyOrder.push("cto");
     const ctoIssue = await issueSvc.create(companyId, {
-      title: `[CTO] System Architecture, Tech Stack, and DB Schema for ${brief.projectName}`,
-      description: `Architect modular services, generate Mermaid topology, choose tech stack, and specify DB/ER & OpenAPI schemas.`,
+      title: `[CTO] Architecture, DB Schema, APIs & Developer Task Division for ${brief.projectName}`,
+      description: `Architect data models, Mermaid ER diagrams, OpenAPI contracts, security controls, and developer tasks.`,
       status: "done",
       priority: "high",
       assigneeAgentId: ctoAgent.id,
@@ -318,89 +255,54 @@ export function governanceOrchestrationService(
       taskTitle: ctoIssue.title,
       issueId: ctoIssue.id,
       status: "done",
-      dependsOnIssueIds: [pmIssue.id, securityIssue.id],
+      dependsOnIssueIds: [kickoffIssue.id],
       documents: [
         validatedDocs.architecture,
         validatedDocs.tech_stack,
         validatedDocs.db_openapi,
+        validatedDocs.cicd_infra,
+        validatedDocs.threat_model,
       ],
       reviews: [
         {
-          reviewerRole: "devops",
-          targetDoc: "INFRA_SPEC.md",
-          comment: "DevOps review: verified container topology matches Node.js / PostgreSQL architecture requirements.",
+          reviewerRole: "cto",
+          targetDoc: "ARCHITECTURE.md",
+          comment: "CTO Architecture Approved: PostgreSQL schema, REST contracts, and frontend/backend developer task division complete.",
           approved: true,
         },
       ],
     });
 
-    // --- Workstream 4: Infrastructure & CI/CD (DevOps) ---
-    // Depends on CTO Architecture
-    dependencyOrder.push("devops");
-    const devopsIssue = await issueSvc.create(companyId, {
-      title: `[DevOps] CI/CD Pipelines and Sandbox Infrastructure for ${brief.projectName}`,
-      description: `Define container topologies, Linux Bubblewrap sandbox confinement, and automated build gates.`,
+    // --- Workstream 3: PM PRD, User Stories & Sprint Backlog ---
+    dependencyOrder.push("pm");
+    const pmIssue = await issueSvc.create(companyId, {
+      title: `[PM] PRD, User Stories, and Sprint Planning for ${brief.projectName}`,
+      description: `Author comprehensive PRD, execution roadmap, test strategy, and sprint backlog with Gherkin acceptance criteria.`,
       status: "done",
-      priority: "medium",
-      assigneeAgentId: devopsAgent.id,
+      priority: "high",
+      assigneeAgentId: pmAgent.id,
       projectId: orgResult.projectId,
       goalId: goal.id,
       parentId: kickoffIssue.id,
     });
 
     workstreams.push({
-      role: "devops",
-      taskTitle: devopsIssue.title,
-      issueId: devopsIssue.id,
+      role: "pm",
+      taskTitle: pmIssue.title,
+      issueId: pmIssue.id,
       status: "done",
-      dependsOnIssueIds: [ctoIssue.id],
-      documents: [validatedDocs.cicd_infra],
-      reviews: [],
-    });
-
-    // --- Workstream 5: Quality Assurance & Testing (QA) ---
-    // Depends on PM PRD & CTO Architecture
-    dependencyOrder.push("qa");
-    const qaIssue = await issueSvc.create(companyId, {
-      title: `[QA] Test Strategy, Automation Matrix, and Release Checklist for ${brief.projectName}`,
-      description: `Formulate testing strategy across unit, integration, and UI component levels with pre-release QA checklist.`,
-      status: "done",
-      priority: "medium",
-      assigneeAgentId: qaAgent.id,
-      projectId: orgResult.projectId,
-      goalId: goal.id,
-      parentId: kickoffIssue.id,
-    });
-
-    workstreams.push({
-      role: "qa",
-      taskTitle: qaIssue.title,
-      issueId: qaIssue.id,
-      status: "done",
-      dependsOnIssueIds: [pmIssue.id, ctoIssue.id],
-      documents: [validatedDocs.test_strategy],
-      reviews: [],
-    });
-
-    // --- Workstream 6: CEO Governance, Team & Risk (CEO) ---
-    // Final synthesis, Charter, Team Allocation, Risk/RACI, and Pack Summary
-    dependencyOrder.push("ceo");
-    workstreams.push({
-      role: "ceo",
-      taskTitle: kickoffIssue.title,
-      issueId: kickoffIssue.id,
-      status: "done",
-      dependsOnIssueIds: [pmIssue.id, securityIssue.id, ctoIssue.id, devopsIssue.id, qaIssue.id],
+      dependsOnIssueIds: [kickoffIssue.id, ctoIssue.id],
       documents: [
-        validatedDocs.charter,
-        validatedDocs.team_allocation,
-        validatedDocs.risk_raci,
+        validatedDocs.prd,
+        validatedDocs.execution_plan,
+        validatedDocs.sprint_plan,
+        validatedDocs.test_strategy,
       ],
       reviews: [
         {
-          reviewerRole: "ceo",
-          targetDoc: "ALL_DOCUMENTS",
-          comment: "CEO Pack Review: All 12 governance documents validated with zero missing sections. Project Pack APPROVED for team assignment.",
+          reviewerRole: "pm",
+          targetDoc: "PRD.md",
+          comment: "PM Backlog Approved: 13 Agile user stories prepared with story points, acceptance criteria, and export bundles.",
           approved: true,
         },
       ],
