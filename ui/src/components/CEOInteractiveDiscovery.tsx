@@ -34,7 +34,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 
 interface CEOInteractiveDiscoveryProps {
   companyId: string;
-  onPlanGenerated: (result: KickoffResponse) => void;
+  projectId?: string;
+  onPlanGenerated: (result: KickoffResponse, projectId?: string) => void;
 }
 
 const IDEA_PRESETS = [
@@ -188,6 +189,7 @@ export function CEOInteractiveDiscovery({
         ideaPrompt,
         answers: combinedAnswers,
         projectName: analysis.projectTitle,
+        projectId,
         provider: provider !== "builtin" ? provider : undefined,
         apiKey: apiKey.trim() || undefined,
         model: model.trim() || undefined,
@@ -198,6 +200,7 @@ export function CEOInteractiveDiscovery({
       setSynthesisProgress(100);
       setSynthesisStage("complete");
       setFinalResult(res.result);
+      onPlanGenerated(res.result, res.projectId);
     } catch (err: any) {
       clearInterval(progressTimer);
       setError(err?.message || "Failed to synthesize project plan. Please try again.");

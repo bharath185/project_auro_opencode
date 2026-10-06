@@ -86,79 +86,204 @@ function resolveCompanyId(req: Request): string {
   return candidate;
 }
 
-// In-memory document store cache for active company governance packs
-const companyDocStore = new Map<
-  string,
-  {
-    projectName: string;
-    packStatus: "draft" | "in_review" | "approved";
-    sprintStories?: SprintStoryItem[];
-    documents: Record<
-      GovernanceDocumentKind,
-      {
-        kind: GovernanceDocumentKind;
-        title: string;
-        fileName: string;
-        authorRole: string;
-        currentVersion: number;
-        versions: Array<{ version: number; content: string; authorRole: string; changeSummary: string; createdAt: string }>;
-        reviews: Array<{ reviewerRole: string; status: string; comments: string; createdAt: string }>;
-      }
-    >;
-  }
->();
-
-function getOrCreateCompanyDocs(companyId: string, projectName: string = "Project Auro") {
-  let store = companyDocStore.get(companyId);
-  if (!store) {
-    const rawPack = generateGovernanceDocumentPack({
-      projectName,
-      problem: "Autonomous project kickoff and document generation",
-      targetUsers: "Project teams and engineering leaders",
-      goals: "Complete governance document pack with full validation",
-      isDemo: true,
-    });
-
-    const dynamicStories = generateDynamicSprintStories({
-      projectName,
-      problem: "Autonomous project kickoff and document generation",
-      targetUsers: "Project teams and engineering leaders",
-      goals: "Complete governance document pack with full validation",
-      isDemo: true,
-    });
-
-    const docsMap: any = {};
-    for (const kind of GOVERNANCE_DOCUMENT_KINDS) {
-      const def = GOVERNANCE_DOC_DEFINITIONS[kind];
-      const raw = rawPack[kind];
-      docsMap[kind] = {
-        kind,
-        title: def.title,
-        fileName: def.fileName,
-        authorRole: def.authorRole,
-        currentVersion: 1,
-        versions: [
-          {
-            version: 1,
-            content: raw.content,
-            authorRole: def.authorRole,
-            changeSummary: "Initial autonomous generation",
-            createdAt: new Date().toISOString(),
-          },
-        ],
-        reviews: [],
-      };
+export interface ProjectRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  domain: string;
+  problem: string;
+  targetUsers: string;
+  goals: string;
+  constraints?: string;
+  budget?: string | number;
+  deadline?: string;
+  preferredStack?: string;
+  packStatus: "draft" | "in_review" | "approved";
+  createdAt: string;
+  updatedAt: string;
+  brief?: any;
+  answers?: Record<string, string>;
+  sprintStories: SprintStoryItem[];
+  documents: Record<
+    GovernanceDocumentKind,
+    {
+      kind: GovernanceDocumentKind;
+      title: string;
+      fileName: string;
+      authorRole: string;
+      currentVersion: number;
+      versions: Array<{ version: number; content: string; authorRole: string; changeSummary: string; createdAt: string }>;
+      reviews: Array<{ reviewerRole: string; status: string; comments: string; createdAt: string }>;
     }
+  >;
+}
 
-    store = {
-      projectName,
-      packStatus: "in_review",
-      sprintStories: dynamicStories,
-      documents: docsMap,
-    };
-    companyDocStore.set(companyId, store);
+// In-memory multi-project store: companyId -> Map<projectId, ProjectRecord>
+const companyProjectsMap = new Map<string, Map<string, ProjectRecord>>();
+const companyActiveProjectMap = new Map<string, string>();
+
+function buildProjectRecord(
+  companyId: string,
+  params: {
+    id?: string;
+    name: string;
+    domain?: string;
+    problem: string;
+    targetUsers: string;
+    goals: string;
+    constraints?: string;
+    budget?: string | number;
+    deadline?: string;
+    preferredStack?: string;
+    isDemo?: boolean;
+    answers?: Record<string, string>;
+    customDocuments?: Record<string, any>;
+    customStories?: SprintStoryItem[];
   }
-  return store;
+): ProjectRecord {
+  const projectId =
+    params.id ||
+    `proj_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+
+  const budgetStr = params.budget !== undefined ? String(params.budget) : undefined;
+
+  const rawPack = params.customDocuments
+    ? null
+    : generateGovernanceDocumentPack({
+        projectName: params.name,
+        problem: params.problem,
+        targetUsers: params.targetUsers,
+        goals: params.goals,
+        constraints: params.constraints,
+        budget: budgetStr,
+        deadline: params.deadline,
+        preferredStack: params.preferredStack,
+        isDemo: params.isDemo ?? false,
+      });
+
+  const dynamicStories =
+    params.customStories ||
+    generateDynamicSprintStories({
+      projectName: params.name,
+      problem: params.problem,
+      targetUsers: params.targetUsers,
+      goals: params.goals,
+      constraints: params.constraints,
+      budget: budgetStr,
+      deadline: params.deadline,
+      preferredStack: params.preferredStack,
+      isDemo: params.isDemo ?? false,
+    });
+
+  const docsMap: any = {};
+  for (const kind of GOVERNANCE_DOCUMENT_KINDS) {
+    const def = GOVERNANCE_DOC_DEFINITIONS[kind];
+    const rawContent = params.customDocuments?.[kind]?.content || rawPack?.[kind]?.content || "";
+    docsMap[kind] = {
+      kind,
+      title: def.title,
+      fileName: def.fileName,
+      authorRole: def.authorRole,
+      currentVersion: 1,
+      versions: [
+        {
+          version: 1,
+          content: rawContent,
+          authorRole: def.authorRole,
+          changeSummary: "Autonomous kickoff generation",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      reviews: [],
+    };
+  }
+
+  return {
+    id: projectId,
+    companyId,
+    name: params.name,
+    domain: params.domain || "Custom Application",
+    problem: params.problem,
+    targetUsers: params.targetUsers,
+    goals: params.goals,
+    constraints: params.constraints,
+    budget: params.budget,
+    deadline: params.deadline,
+    preferredStack: params.preferredStack,
+    packStatus: "in_review",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    answers: params.answers,
+    sprintStories: dynamicStories,
+    documents: docsMap,
+  };
+}
+
+function ensureCompanyProjects(companyId: string): Map<string, ProjectRecord> {
+  let projectMap = companyProjectsMap.get(companyId);
+  if (!projectMap) {
+    projectMap = new Map<string, ProjectRecord>();
+
+    // Seed default starter project: Sarees Selling E-Commerce Platform
+    const sareeProj = buildProjectRecord(companyId, {
+      id: "proj_saree_ecom",
+      name: "Sarees Selling E-Commerce Platform",
+      domain: "E-Commerce",
+      problem: "Online storefront for selling authentic handloom and bridal sarees with blouse tailoring customizer, video reels preview, and multi-currency checkout.",
+      targetUsers: "Ethnic fashion shoppers, bridal shoppers, international diaspora customers",
+      goals: "High-converting responsive storefront with catalog filters, custom measurements form, and automated courier tracking.",
+      preferredStack: "Next.js 15, Tailwind CSS, Node.js Fastify, PostgreSQL, Stripe & Razorpay",
+      isDemo: true,
+    });
+    projectMap.set(sareeProj.id, sareeProj);
+
+    // Seed second starter project: Enterprise Sales CRM
+    const salesProj = buildProjectRecord(companyId, {
+      id: "proj_sales_crm",
+      name: "Enterprise B2B Sales & Pipeline Tracker",
+      domain: "SaaS CRM",
+      problem: "Internal sales intelligence and lead workflow portal with multi-touch pipeline stages, automated email cadence tracking, and deal revenue forecasting.",
+      targetUsers: "Account executives, SDRs, VP of Sales",
+      goals: "Real-time deal pipeline tracking with SLA alerts and automated CRM sync.",
+      preferredStack: "React 19, Tailwind CSS, Express, PostgreSQL, Redis",
+      isDemo: true,
+    });
+    projectMap.set(salesProj.id, salesProj);
+
+    // Seed third starter project: Telehealth Patient EHR Suite
+    const telehealthProj = buildProjectRecord(companyId, {
+      id: "proj_telehealth",
+      name: "Telehealth Clinic & Patient EHR Suite",
+      domain: "Healthcare",
+      problem: "Telemedicine consultation portal with instant doctor appointment scheduling, encrypted WebRTC video calls, and HIPAA-compliant digital prescription dispatch.",
+      targetUsers: "Patients, registered physicians, clinic administrators",
+      goals: "Streamlined virtual consultation flow with secure records management.",
+      preferredStack: "Next.js 15, Tailwind CSS, FastAPI / Python, PostgreSQL, WebRTC",
+      isDemo: true,
+    });
+    projectMap.set(telehealthProj.id, telehealthProj);
+
+    companyProjectsMap.set(companyId, projectMap);
+    companyActiveProjectMap.set(companyId, sareeProj.id);
+  }
+  return projectMap;
+}
+
+function getActiveProject(companyId: string, requestedProjectId?: string): ProjectRecord {
+  const projects = ensureCompanyProjects(companyId);
+  if (requestedProjectId && projects.has(requestedProjectId)) {
+    return projects.get(requestedProjectId)!;
+  }
+  const activeId = companyActiveProjectMap.get(companyId);
+  if (activeId && projects.has(activeId)) {
+    return projects.get(activeId)!;
+  }
+  const first = projects.values().next().value;
+  if (first) {
+    companyActiveProjectMap.set(companyId, first.id);
+    return first;
+  }
+  throw notFound("No projects found for company");
 }
 
 export function governanceRoutes(db: Db) {
@@ -242,13 +367,120 @@ export function governanceRoutes(db: Db) {
   router.put("/companies/:companyId/governance/prompts/:role", validate(updatePromptSchema), handlePutPrompt);
   router.put("/governance/prompts/:role", validate(updatePromptSchema), handlePutPrompt);
 
+  // --- Multi-Project Management Endpoints ---
+  const handleListProjects = async (req: Request, res: any) => {
+    const companyId = resolveCompanyId(req);
+    const projectsMap = ensureCompanyProjects(companyId);
+    const activeId = companyActiveProjectMap.get(companyId) || projectsMap.keys().next().value;
+
+    const projectList = Array.from(projectsMap.values()).map((p) => ({
+      id: p.id,
+      name: p.name,
+      domain: p.domain,
+      problem: p.problem,
+      packStatus: p.packStatus,
+      docCount: Object.keys(p.documents).length,
+      storyCount: p.sprintStories?.length || 0,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      isActive: p.id === activeId,
+    }));
+
+    res.json({
+      activeProjectId: activeId,
+      projects: projectList,
+    });
+  };
+  router.get("/companies/:companyId/governance/projects", handleListProjects);
+  router.get("/governance/projects", handleListProjects);
+
+  const handleGetProject = async (req: Request, res: any) => {
+    const companyId = resolveCompanyId(req);
+    const projectId = req.params.projectId as string;
+    const project = getActiveProject(companyId, projectId);
+    res.json(project);
+  };
+  router.get("/companies/:companyId/governance/projects/:projectId", handleGetProject);
+  router.get("/governance/projects/:projectId", handleGetProject);
+
+  const handleSelectProject = async (req: Request, res: any) => {
+    const companyId = resolveCompanyId(req);
+    const projectId = req.params.projectId as string;
+    const project = getActiveProject(companyId, projectId);
+    companyActiveProjectMap.set(companyId, project.id);
+    res.json({ success: true, activeProjectId: project.id, project });
+  };
+  router.post("/companies/:companyId/governance/projects/:projectId/select", handleSelectProject);
+  router.post("/governance/projects/:projectId/select", handleSelectProject);
+
+  const handleDeleteProject = async (req: Request, res: any) => {
+    const companyId = resolveCompanyId(req);
+    const projectId = req.params.projectId as string;
+    const projectsMap = ensureCompanyProjects(companyId);
+
+    if (projectsMap.size <= 1) {
+      throw unprocessable("Cannot delete the last remaining project. Please create another project first.");
+    }
+
+    if (!projectsMap.has(projectId)) {
+      throw notFound(`Project not found: ${projectId}`);
+    }
+
+    projectsMap.delete(projectId);
+
+    // If active was deleted, reset active to first remaining
+    if (companyActiveProjectMap.get(companyId) === projectId) {
+      const remaining = projectsMap.keys().next().value;
+      if (remaining) {
+        companyActiveProjectMap.set(companyId, remaining);
+      }
+    }
+
+    res.json({
+      success: true,
+      deletedProjectId: projectId,
+      activeProjectId: companyActiveProjectMap.get(companyId),
+    });
+  };
+  router.delete("/companies/:companyId/governance/projects/:projectId", handleDeleteProject);
+  router.delete("/governance/projects/:projectId", handleDeleteProject);
+
+  const handleCreateProject = async (req: Request, res: any) => {
+    const companyId = resolveCompanyId(req);
+    const { name, domain, problem, targetUsers, goals, preferredStack } = req.body;
+    if (!name || typeof name !== "string") {
+      throw unprocessable("Project name is required");
+    }
+
+    const projectsMap = ensureCompanyProjects(companyId);
+    const newProj = buildProjectRecord(companyId, {
+      name,
+      domain: domain || "Custom Application",
+      problem: problem || `Custom application requirements for ${name}`,
+      targetUsers: targetUsers || "Target users and stakeholders",
+      goals: goals || `Deliver complete, production-ready ${name} platform`,
+      preferredStack: preferredStack || "Modern Full-Stack Architecture",
+    });
+
+    projectsMap.set(newProj.id, newProj);
+    companyActiveProjectMap.set(companyId, newProj.id);
+
+    res.status(201).json({
+      success: true,
+      project: newProj,
+      activeProjectId: newProj.id,
+    });
+  };
+  router.post("/companies/:companyId/governance/projects", handleCreateProject);
+  router.post("/governance/projects", handleCreateProject);
+
   // Submit Project Kickoff brief
   const handleKickoff = async (req: Request, res: any) => {
     const companyId = resolveCompanyId(req);
     const result = await orchSvc.submitKickoffBrief(companyId, req.body);
     const actor = getActorInfo(req);
 
-    // Populate document store with generated output
+    // Populate document store with generated output in multi-project record
     const storeDocs: any = {};
     for (const [kind, doc] of Object.entries(result.documents)) {
       storeDocs[kind] = {
@@ -269,12 +501,24 @@ export function governanceRoutes(db: Db) {
         reviews: [],
       };
     }
-    companyDocStore.set(companyId, {
-      projectName: result.projectName,
-      packStatus: "in_review",
-      sprintStories: result.sprintStories,
-      documents: storeDocs,
+
+    const projectsMap = ensureCompanyProjects(companyId);
+    const newProj = buildProjectRecord(companyId, {
+      name: result.projectName,
+      domain: "Custom",
+      problem: req.body.problem || "Autonomous kickoff",
+      targetUsers: req.body.targetUsers || "Users",
+      goals: req.body.goals || "Goals",
+      constraints: req.body.constraints,
+      budget: req.body.budget,
+      deadline: req.body.deadline,
+      preferredStack: req.body.preferredStack,
+      customDocuments: storeDocs,
+      customStories: result.sprintStories,
     });
+
+    projectsMap.set(newProj.id, newProj);
+    companyActiveProjectMap.set(companyId, newProj.id);
 
     await logActivity(db, {
       companyId,
@@ -287,6 +531,7 @@ export function governanceRoutes(db: Db) {
       entityType: "goal",
       entityId: result.goalId,
       details: {
+        projectId: newProj.id,
         projectName: result.projectName,
         goalId: result.goalId,
         kickoffIssueId: result.kickoffIssueId,
@@ -294,7 +539,10 @@ export function governanceRoutes(db: Db) {
       },
     });
 
-    res.status(201).json(result);
+    res.status(201).json({
+      ...result,
+      projectId: newProj.id,
+    });
   };
   router.post("/companies/:companyId/governance/kickoff", validate(kickoffBriefSchema), handleKickoff);
   router.post("/governance/kickoff", validate(kickoffBriefSchema), handleKickoff);
@@ -320,7 +568,7 @@ export function governanceRoutes(db: Db) {
   // 2. CEO Executive Synthesis & C-Suite Handoff Orchestration
   const handleCeoSynthesize = async (req: Request, res: any) => {
     const companyId = resolveCompanyId(req);
-    const { ideaPrompt, answers, projectName } = req.body;
+    const { ideaPrompt, answers, projectName, projectId } = req.body;
     if (!ideaPrompt || typeof ideaPrompt !== "string") {
       throw unprocessable("Project idea is required");
     }
@@ -360,12 +608,43 @@ export function governanceRoutes(db: Db) {
         reviews: [],
       };
     }
-    companyDocStore.set(companyId, {
-      projectName: result.projectName,
-      packStatus: "in_review",
-      sprintStories: result.sprintStories,
-      documents: storeDocs,
-    });
+
+    const projectsMap = ensureCompanyProjects(companyId);
+    let targetProjectId = projectId;
+    let projRecord: ProjectRecord;
+
+    if (targetProjectId && projectsMap.has(targetProjectId)) {
+      projRecord = projectsMap.get(targetProjectId)!;
+      projRecord.name = result.projectName;
+      projRecord.problem = brief.problem;
+      projRecord.targetUsers = brief.targetUsers;
+      projRecord.goals = brief.goals;
+      projRecord.preferredStack = brief.preferredStack;
+      projRecord.documents = storeDocs;
+      projRecord.sprintStories = result.sprintStories;
+      projRecord.updatedAt = new Date().toISOString();
+      projRecord.answers = answers;
+    } else {
+      projRecord = buildProjectRecord(companyId, {
+        id: targetProjectId,
+        name: result.projectName,
+        domain: "Client Custom Build",
+        problem: brief.problem,
+        targetUsers: brief.targetUsers,
+        goals: brief.goals,
+        constraints: brief.constraints,
+        budget: brief.budget,
+        deadline: brief.deadline,
+        preferredStack: brief.preferredStack,
+        answers,
+        customDocuments: storeDocs,
+        customStories: result.sprintStories,
+      });
+      projectsMap.set(projRecord.id, projRecord);
+      targetProjectId = projRecord.id;
+    }
+
+    companyActiveProjectMap.set(companyId, targetProjectId);
 
     await logActivity(db, {
       companyId,
@@ -378,14 +657,16 @@ export function governanceRoutes(db: Db) {
       entityType: "goal",
       entityId: result.goalId,
       details: {
+        projectId: targetProjectId,
         projectName: result.projectName,
-        domain: "ecommerce_saree_or_custom",
+        domain: projRecord.domain,
         goalId: result.goalId,
       },
     });
 
     res.status(201).json({
       success: true,
+      projectId: targetProjectId,
       brief,
       result,
     });
@@ -396,7 +677,8 @@ export function governanceRoutes(db: Db) {
   // List all 12 Governance Documents with metadata and validation status
   const handleListDocs = async (req: Request, res: any) => {
     const companyId = resolveCompanyId(req);
-    const store = getOrCreateCompanyDocs(companyId);
+    const projectId = (req.query.projectId as string) || (req.params.projectId as string);
+    const store = getActiveProject(companyId, projectId);
 
     const docList = Object.values(store.documents).map((doc) => {
       const latestVer = doc.versions[doc.versions.length - 1];
@@ -416,7 +698,9 @@ export function governanceRoutes(db: Db) {
     });
 
     res.json({
-      projectName: store.projectName,
+      projectId: store.id,
+      projectName: store.name,
+      domain: store.domain,
       packStatus: store.packStatus,
       documents: docList,
     });
@@ -428,7 +712,8 @@ export function governanceRoutes(db: Db) {
   const handleGetDoc = async (req: Request, res: any) => {
     const companyId = resolveCompanyId(req);
     const kind = req.params.kind as GovernanceDocumentKind;
-    const store = getOrCreateCompanyDocs(companyId);
+    const projectId = req.query.projectId as string;
+    const store = getActiveProject(companyId, projectId);
     const doc = store.documents[kind];
 
     if (!doc) {
@@ -453,8 +738,9 @@ export function governanceRoutes(db: Db) {
   const handleUpdateDoc = async (req: Request, res: any) => {
     const companyId = resolveCompanyId(req);
     const kind = req.params.kind as GovernanceDocumentKind;
+    const projectId = req.query.projectId as string;
     const { content, changeSummary } = req.body;
-    const store = getOrCreateCompanyDocs(companyId);
+    const store = getActiveProject(companyId, projectId);
     const doc = store.documents[kind];
 
     if (!doc) {
@@ -474,6 +760,7 @@ export function governanceRoutes(db: Db) {
 
     doc.versions.push(newVersion);
     doc.currentVersion = newVersionNum;
+    store.updatedAt = new Date().toISOString();
 
     if (db && typeof (db as any).insert === "function") {
       const actor = getActorInfo(req);
@@ -483,8 +770,9 @@ export function governanceRoutes(db: Db) {
         actorId: actor.actorId,
         action: "governance.document_updated",
         entityType: "document",
-        entityId: `${companyId}:${kind}`,
+        entityId: `${companyId}:${store.id}:${kind}`,
         details: {
+          projectId: store.id,
           kind,
           version: newVersionNum,
           isValid: validation.valid,
@@ -512,8 +800,9 @@ export function governanceRoutes(db: Db) {
   const handleReviewDoc = async (req: Request, res: any) => {
     const companyId = resolveCompanyId(req);
     const kind = req.params.kind as GovernanceDocumentKind;
+    const projectId = req.query.projectId as string;
     const { reviewerRole, status, comments } = req.body;
-    const store = getOrCreateCompanyDocs(companyId);
+    const store = getActiveProject(companyId, projectId);
     const doc = store.documents[kind];
 
     if (!doc) {
@@ -528,6 +817,7 @@ export function governanceRoutes(db: Db) {
     };
 
     doc.reviews.push(review);
+    store.updatedAt = new Date().toISOString();
 
     res.status(201).json({
       success: true,
@@ -541,7 +831,8 @@ export function governanceRoutes(db: Db) {
   // CEO Approval Gate on the Final Project Pack
   const handleApprovePack = async (req: Request, res: any) => {
     const companyId = resolveCompanyId(req);
-    const store = getOrCreateCompanyDocs(companyId);
+    const projectId = (req.body?.projectId as string) || (req.query.projectId as string);
+    const store = getActiveProject(companyId, projectId);
 
     // Validate that all 12 documents are complete and valid
     const incompleteDocs: string[] = [];
@@ -560,6 +851,7 @@ export function governanceRoutes(db: Db) {
     }
 
     store.packStatus = "approved";
+    store.updatedAt = new Date().toISOString();
 
     if (db && typeof (db as any).insert === "function") {
       const actor = getActorInfo(req);
@@ -571,7 +863,8 @@ export function governanceRoutes(db: Db) {
         entityType: "company",
         entityId: companyId,
         details: {
-          projectName: store.projectName,
+          projectId: store.id,
+          projectName: store.name,
           approvedAt: new Date().toISOString(),
         },
       });
@@ -581,7 +874,8 @@ export function governanceRoutes(db: Db) {
       success: true,
       packStatus: "approved",
       message: "Project Governance Pack has been formally APPROVED by the CEO.",
-      projectName: store.projectName,
+      projectId: store.id,
+      projectName: store.name,
       approvedAt: new Date().toISOString(),
     });
   };
@@ -592,7 +886,8 @@ export function governanceRoutes(db: Db) {
   const handleExport = async (req: Request, res: any) => {
     const companyId = resolveCompanyId(req);
     const format = String(req.params.format || "").toLowerCase();
-    const store = getOrCreateCompanyDocs(companyId);
+    const projectId = (req.query.projectId as string) || (req.params.projectId as string);
+    const store = getActiveProject(companyId, projectId);
 
     const docContents: Record<string, { title: string; fileName: string; content: string }> = {};
     const zipFiles: Record<string, string> = {};
@@ -615,18 +910,18 @@ export function governanceRoutes(db: Db) {
     switch (format) {
       case "markdown":
       case "md": {
-        const md = exportCombinedMarkdown(store.projectName, docContents);
+        const md = exportCombinedMarkdown(store.name, docContents);
         res.setHeader("Content-Type", "text/markdown");
-        res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-governance-pack.md"`);
+        res.setHeader("Content-Disposition", `attachment; filename="${store.name}-governance-pack.md"`);
         return res.send(md);
       }
 
       case "zip": {
         const sprintCsv = exportSprintBacklogCsv(stories);
-        const jiraCsv = exportJiraImportCsv(store.projectName, stories);
-        const readmeForDevs = `# Engineering Hand-off Guide: ${store.projectName}
+        const jiraCsv = exportJiraImportCsv(store.name, stories);
+        const readmeForDevs = `# Engineering Hand-off Guide: ${store.name}
 
-Welcome to the **${store.projectName}** project repository! This complete package was autonomously prepared by the C-Suite Governance Agent Pack (CEO, CTO, PM, Lead Architect, QA, DevOps, and Security Leads) and contains everything human engineering teams need to execute the project manually.
+Welcome to the **${store.name}** project repository! This complete package was autonomously prepared by the C-Suite Governance Agent Pack (CEO, CTO, PM) and contains everything human engineering teams need to execute the project manually.
 
 ## Included Governance & Architecture Documents
 1. **CHARTER.md** - Project Charter & Vision (CEO)
@@ -652,13 +947,13 @@ Welcome to the **${store.projectName}** project repository! This complete packag
 3. Review **\`TEST_STRATEGY.md\`** and ensure all PRs satisfy acceptance criteria and definition of done.
 `;
 
-        const projectPackSummary = `# Project Governance Pack Summary: ${store.projectName}
+        const projectPackSummary = `# Project Governance Pack Summary: ${store.name}
 - **Status**: APPROVED by CEO
 - **Total Validated Documents**: 12 / 12
 - **Sprint Stories Count**: ${stories.length}
 - **Export Date**: ${new Date().toISOString()}
 
-All 12 documents have been cross-reviewed and approved by the C-Suite and Lead Engineers.
+All 12 documents have been cross-reviewed and approved by the C-Suite (CEO, CTO, PM).
 `;
 
         zipFiles["SPRINT_BACKLOG.csv"] = sprintCsv;
@@ -668,21 +963,21 @@ All 12 documents have been cross-reviewed and approved by the C-Suite and Lead E
 
         const zip = exportZipArchive(zipFiles);
         res.setHeader("Content-Type", "application/zip");
-        res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-governance-pack.zip"`);
+        res.setHeader("Content-Disposition", `attachment; filename="${store.name}-governance-pack.zip"`);
         return res.send(zip);
       }
 
       case "pdf": {
-        const pdf = exportPdf(store.projectName, docContents);
+        const pdf = exportPdf(store.name, docContents);
         res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-governance-pack.pdf"`);
+        res.setHeader("Content-Disposition", `attachment; filename="${store.name}-governance-pack.pdf"`);
         return res.send(pdf);
       }
 
       case "docx": {
-        const docx = exportDocx(store.projectName, docContents);
+        const docx = exportDocx(store.name, docContents);
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-        res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-governance-pack.docx"`);
+        res.setHeader("Content-Disposition", `attachment; filename="${store.name}-governance-pack.docx"`);
         return res.send(docx);
       }
 
@@ -690,23 +985,23 @@ All 12 documents have been cross-reviewed and approved by the C-Suite and Lead E
       case "csv": {
         const csv = exportSprintBacklogCsv(stories);
         res.setHeader("Content-Type", "text/csv");
-        res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-sprint-backlog.csv"`);
+        res.setHeader("Content-Disposition", `attachment; filename="${store.name}-sprint-backlog.csv"`);
         return res.send(csv);
       }
 
       case "jira-csv":
       case "jira": {
-        const jiraCsv = exportJiraImportCsv(store.projectName, stories);
+        const jiraCsv = exportJiraImportCsv(store.name, stories);
         res.setHeader("Content-Type", "text/csv");
-        res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-jira-backlog.csv"`);
+        res.setHeader("Content-Disposition", `attachment; filename="${store.name}-jira-backlog.csv"`);
         return res.send(jiraCsv);
       }
 
       case "sprint-xlsx":
       case "xlsx": {
-        const xlsx = exportSprintBacklogXlsx(store.projectName, stories);
+        const xlsx = exportSprintBacklogXlsx(store.name, stories);
         res.setHeader("Content-Type", "application/vnd.ms-excel");
-        res.setHeader("Content-Disposition", `attachment; filename="${store.projectName}-sprint-backlog.xlsx"`);
+        res.setHeader("Content-Disposition", `attachment; filename="${store.name}-sprint-backlog.xlsx"`);
         return res.send(xlsx);
       }
 
@@ -716,6 +1011,8 @@ All 12 documents have been cross-reviewed and approved by the C-Suite and Lead E
   };
   router.get("/companies/:companyId/governance/export/:format", handleExport);
   router.get("/governance/export/:format", handleExport);
+  router.get("/companies/:companyId/governance/projects/:projectId/export/:format", handleExport);
+  router.get("/governance/projects/:projectId/export/:format", handleExport);
 
   // --- Human Team Assignment & Sprint Ticket Tracking ---
   const handleGetTeam = async (req: Request, res: any) => {

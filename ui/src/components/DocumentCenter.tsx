@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface DocumentCenterProps {
   companyId: string;
+  projectId?: string;
 }
 
 const DOC_GROUPS = [
@@ -65,7 +66,7 @@ const DOC_GROUPS = [
   },
 ];
 
-export function DocumentCenter({ companyId }: DocumentCenterProps) {
+export function DocumentCenter({ companyId, projectId }: DocumentCenterProps) {
   const [docList, setDocList] = useState<GovernanceDocSummary[]>([]);
   const [packStatus, setPackStatus] = useState<"draft" | "in_review" | "approved">("in_review");
   const [projectName, setProjectName] = useState("Project Auro");
@@ -91,7 +92,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
   const loadDocuments = async () => {
     setLoading(true);
     try {
-      const res = await governanceApi.listDocuments(companyId);
+      const res = await governanceApi.listDocuments(companyId, projectId);
       setDocList(res.documents);
       setPackStatus(res.packStatus);
       setProjectName(res.projectName);
@@ -107,7 +108,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
 
   const loadCurrentDoc = async (kind: string) => {
     try {
-      const doc = await governanceApi.getDocument(companyId, kind);
+      const doc = await governanceApi.getDocument(companyId, kind, projectId);
       setCurrentDoc(doc);
       setEditedContent(doc.content);
       if (doc.versions.length > 1) {
@@ -122,7 +123,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
 
   useEffect(() => {
     loadDocuments();
-  }, [companyId]);
+  }, [companyId, projectId]);
 
   useEffect(() => {
     if (selectedKind) {
@@ -130,7 +131,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
       setSuccessMessage(null);
       setErrorMessage(null);
     }
-  }, [selectedKind, companyId]);
+  }, [selectedKind, companyId, projectId]);
 
   const handleSaveDocument = async () => {
     if (!selectedKind || !editedContent.trim()) return;
@@ -276,7 +277,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
               asChild
               className="text-xs font-semibold shadow-xs"
             >
-              <a href={governanceApi.getZipExportUrl(companyId)} download>
+              <a href={governanceApi.getZipExportUrl(companyId, projectId)} download>
                 <Download className="mr-1.5 h-3.5 w-3.5" /> Download Full .ZIP
               </a>
             </Button>
@@ -287,7 +288,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
               asChild
               className="text-xs font-medium border-border"
             >
-              <a href={governanceApi.getJiraExportUrl(companyId)} download>
+              <a href={governanceApi.getJiraExportUrl(companyId, projectId)} download>
                 <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-blue-500" /> Jira CSV
               </a>
             </Button>
@@ -298,7 +299,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
               asChild
               className="text-xs font-medium border-border"
             >
-              <a href={governanceApi.getXlsxExportUrl(companyId)} download>
+              <a href={governanceApi.getXlsxExportUrl(companyId, projectId)} download>
                 <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Sprint XLSX
               </a>
             </Button>
@@ -309,7 +310,7 @@ export function DocumentCenter({ companyId }: DocumentCenterProps) {
               asChild
               className="text-xs font-medium border-border"
             >
-              <a href={governanceApi.getMarkdownExportUrl(companyId)} download>
+              <a href={governanceApi.getMarkdownExportUrl(companyId, projectId)} download>
                 <FileText className="mr-1.5 h-3.5 w-3.5" /> All-in-One MD
               </a>
             </Button>

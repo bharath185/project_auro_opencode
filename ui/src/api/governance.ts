@@ -131,7 +131,61 @@ export interface GovernanceDocDetail {
   }>;
 }
 
+export interface GovernanceProjectSummary {
+  id: string;
+  name: string;
+  domain: string;
+  problem: string;
+  packStatus: "draft" | "in_review" | "approved";
+  docCount: number;
+  storyCount: number;
+  createdAt: string;
+  updatedAt: string;
+  isActive: boolean;
+}
+
 export const governanceApi = {
+  // Multi-Project API
+  listProjects: (companyId: string) =>
+    api.get<{
+      activeProjectId: string;
+      projects: GovernanceProjectSummary[];
+    }>(`/companies/${companyId}/governance/projects`),
+
+  getProject: (companyId: string, projectId: string) =>
+    api.get<any>(`/companies/${companyId}/governance/projects/${projectId}`),
+
+  createProject: (
+    companyId: string,
+    payload: {
+      name: string;
+      domain?: string;
+      problem?: string;
+      targetUsers?: string;
+      goals?: string;
+      preferredStack?: string;
+    },
+  ) =>
+    api.post<{
+      success: boolean;
+      project: any;
+      activeProjectId: string;
+    }>(`/companies/${companyId}/governance/projects`, payload),
+
+  selectProject: (companyId: string, projectId: string) =>
+    api.post<{
+      success: boolean;
+      activeProjectId: string;
+      project: any;
+    }>(`/companies/${companyId}/governance/projects/${projectId}/select`, {}),
+
+  deleteProject: (companyId: string, projectId: string) =>
+    api.delete<{
+      success: boolean;
+      deletedProjectId: string;
+      activeProjectId: string;
+    }>(`/companies/${companyId}/governance/projects/${projectId}`),
+
   getStatus: (companyId: string) =>
     api.get<GovernanceOrgStatus>(`/companies/${companyId}/governance/status`),
 
@@ -167,6 +221,7 @@ export const governanceApi = {
     companyId: string,
     payload: {
       ideaPrompt: string;
+      projectId?: string;
       provider?: string;
       apiKey?: string;
       model?: string;
@@ -181,6 +236,7 @@ export const governanceApi = {
       ideaPrompt: string;
       answers: Record<string, string>;
       projectName?: string;
+      projectId?: string;
       provider?: string;
       apiKey?: string;
       model?: string;
@@ -189,21 +245,26 @@ export const governanceApi = {
   ) =>
     api.post<{
       success: boolean;
+      projectId: string;
       brief: any;
       result: KickoffResponse;
     }>(`/companies/${companyId}/governance/ceo/synthesize`, payload),
 
-  listDocuments: (companyId: string) =>
+  listDocuments: (companyId: string, projectId?: string) =>
     api.get<{
+      projectId: string;
       projectName: string;
+      domain: string;
       packStatus: "draft" | "in_review" | "approved";
       documents: GovernanceDocSummary[];
-    }>(`/companies/${companyId}/governance/documents`),
+    }>(`/companies/${companyId}/governance/documents${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`),
 
-  getDocument: (companyId: string, kind: string) =>
-    api.get<GovernanceDocDetail>(`/companies/${companyId}/governance/documents/${kind}`),
+  getDocument: (companyId: string, kind: string, projectId?: string) =>
+    api.get<GovernanceDocDetail>(
+      `/companies/${companyId}/governance/documents/${kind}${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`
+    ),
 
-  updateDocument: (companyId: string, kind: string, content: string, changeSummary?: string) =>
+  updateDocument: (companyId: string, kind: string, content: string, changeSummary?: string, projectId?: string) =>
     api.put<{
       success: boolean;
       kind: string;
@@ -211,7 +272,7 @@ export const governanceApi = {
       isValid: boolean;
       missingSections: string[];
       document: GovernanceDocDetail;
-    }>(`/companies/${companyId}/governance/documents/${kind}`, { content, changeSummary }),
+    }>(`/companies/${companyId}/governance/documents/${kind}${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`, { content, changeSummary }),
 
   reviewDocument: (
     companyId: string,
@@ -221,39 +282,53 @@ export const governanceApi = {
       status: "approved" | "changes_requested";
       comments: string;
     },
+    projectId?: string,
   ) =>
     api.post<{
       success: boolean;
       review: any;
       reviews: any[];
-    }>(`/companies/${companyId}/governance/documents/${kind}/review`, data),
+    }>(`/companies/${companyId}/governance/documents/${kind}/review${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`, data),
 
-  approvePack: (companyId: string) =>
+  approvePack: (companyId: string, projectId?: string) =>
     api.post<{
       success: boolean;
       packStatus: "approved";
       message: string;
+      projectId: string;
       projectName: string;
       approvedAt: string;
-    }>(`/companies/${companyId}/governance/pack/approve`, {}),
+    }>(`/companies/${companyId}/governance/pack/approve`, { projectId }),
 
-  getExportUrl: (companyId: string, format: string) =>
-    `/api/companies/${companyId}/governance/export/${format}`,
+  getExportUrl: (companyId: string, format: string, projectId?: string) =>
+    projectId
+      ? `/api/companies/${companyId}/governance/projects/${projectId}/export/${format}`
+      : `/api/companies/${companyId}/governance/export/${format}`,
 
-  getZipExportUrl: (companyId: string) =>
-    `/api/companies/${companyId}/governance/export/zip`,
+  getZipExportUrl: (companyId: string, projectId?: string) =>
+    projectId
+      ? `/api/companies/${companyId}/governance/projects/${projectId}/export/zip`
+      : `/api/companies/${companyId}/governance/export/zip`,
 
-  getJiraExportUrl: (companyId: string) =>
-    `/api/companies/${companyId}/governance/export/jira`,
+  getJiraExportUrl: (companyId: string, projectId?: string) =>
+    projectId
+      ? `/api/companies/${companyId}/governance/projects/${projectId}/export/jira`
+      : `/api/companies/${companyId}/governance/export/jira`,
 
-  getXlsxExportUrl: (companyId: string) =>
-    `/api/companies/${companyId}/governance/export/xlsx`,
+  getXlsxExportUrl: (companyId: string, projectId?: string) =>
+    projectId
+      ? `/api/companies/${companyId}/governance/projects/${projectId}/export/xlsx`
+      : `/api/companies/${companyId}/governance/export/xlsx`,
 
-  getMarkdownExportUrl: (companyId: string) =>
-    `/api/companies/${companyId}/governance/export/markdown`,
+  getMarkdownExportUrl: (companyId: string, projectId?: string) =>
+    projectId
+      ? `/api/companies/${companyId}/governance/projects/${projectId}/export/markdown`
+      : `/api/companies/${companyId}/governance/export/markdown`,
 
-  getPdfExportUrl: (companyId: string) =>
-    `/api/companies/${companyId}/governance/export/pdf`,
+  getPdfExportUrl: (companyId: string, projectId?: string) =>
+    projectId
+      ? `/api/companies/${companyId}/governance/projects/${projectId}/export/pdf`
+      : `/api/companies/${companyId}/governance/export/pdf`,
 
   getTeamState: (companyId: string) =>
     api.get<{
