@@ -163,8 +163,17 @@ export const governanceApi = {
   submitKickoff: (companyId: string, brief: ProjectKickoffBriefPayload) =>
     api.post<KickoffResponse>(`/companies/${companyId}/governance/kickoff`, brief),
 
-  ceoConsult: (companyId: string, ideaPrompt: string) =>
-    api.post<CeoConsultationAnalysis>(`/companies/${companyId}/governance/ceo/consult`, { ideaPrompt }),
+  ceoConsult: (
+    companyId: string,
+    payload: {
+      ideaPrompt: string;
+      provider?: string;
+      apiKey?: string;
+      model?: string;
+      baseUrl?: string;
+    },
+  ) =>
+    api.post<CeoConsultationAnalysis>(`/companies/${companyId}/governance/ceo/consult`, payload),
 
   ceoSynthesize: (
     companyId: string,
@@ -172,6 +181,10 @@ export const governanceApi = {
       ideaPrompt: string;
       answers: Record<string, string>;
       projectName?: string;
+      provider?: string;
+      apiKey?: string;
+      model?: string;
+      baseUrl?: string;
     },
   ) =>
     api.post<{

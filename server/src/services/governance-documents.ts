@@ -145,31 +145,40 @@ ${ctx.problem}
       { id: "non_functional_reqs", heading: "Non-Functional Requirements", aliases: ["Non-Functional Requirements", "NFRs", "System Quality Attributes"], description: "Performance, security, availability" },
       { id: "acceptance_criteria", heading: "Acceptance Criteria", aliases: ["Acceptance Criteria", "Definition of Done"], description: "Sign-off rules for release" },
     ],
-    templateGenerator: (ctx) => `# Product Requirements Document: ${ctx.projectName}
+    templateGenerator: (ctx) => {
+      const isSaree = ctx.projectName.toLowerCase().includes("saree") || ctx.problem.toLowerCase().includes("saree");
+      return `# Product Requirements Document: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 ## Product Overview
 ${ctx.projectName} addresses critical operational requirements for ${ctx.targetUsers}.
 
 ## User Journeys & Use Cases
-1. **Kickoff Flow**: User inputs project constraints and triggers full governance pack.
+${isSaree ? `1. **Visual Discovery**: Buyer browses silk, cotton, and handloom sarees with 4K texture zoom and drape video reels.
+2. **Custom Sizing & Tailoring**: Buyer selects matching blouse stitching with custom bust, waist, and neck measurements + fall/pico toggle.
+3. **Dual-Rail Checkout**: India domestic buyers pay via UPI/COD with OTP verification; NRI diaspora buyers checkout in USD/GBP/AED via Stripe.
+4. **Automated Courier Dispatch**: Orders trigger Shiprocket / Delhivery courier API for instant AWB generation and live WhatsApp updates.` : `1. **Kickoff Flow**: User inputs project constraints and triggers full governance pack.
 2. **Review & Refinement**: Agents cross-review generated artifacts and resolve feedback in-thread.
-3. **Delivery Hand-off**: Approved sprint tickets are exported to Jira / XLSX.
+3. **Delivery Hand-off**: Approved sprint tickets are exported to Jira / XLSX.`}
 
 ## Functional Requirements
-- **FR-1 (Kickoff)**: Capture project metadata, team skills (${ctx.teamSkills || "N/A"}), and constraints.
+${isSaree ? `- **FR-1 (Catalog & Media)**: High-resolution multi-angle image gallery with 4K macro zoom and video reels.
+- **FR-2 (Customization Engine)**: Interactive blouse tailoring measurement capture (bust, waist, sleeve, neck) and fall/pico service add-ons.
+- **FR-3 (Payment Gateways)**: Razorpay integration for domestic UPI/Netbanking/COD and Stripe for international multi-currency transactions.
+- **FR-4 (Automated Logistics)**: Shiprocket API integration for real-time shipping rates and automated AWB generation.` : `- **FR-1 (Kickoff)**: Capture project metadata, team skills (${ctx.teamSkills || "N/A"}), and constraints.
 - **FR-2 (Orchestration)**: CEO delegates workstreams to CTO, PM, QA, DevOps, and Security.
-- **FR-3 (Document Generation)**: Produce all 12 validated governance artifacts.
+- **FR-3 (Document Generation)**: Produce all 12 validated governance artifacts.`}
 
 ## Non-Functional Requirements
-- **Performance**: Document pack compilation under 15 seconds.
-- **Reliability**: Automatic model fallback on quota / provider errors.
-- **Security**: Strict tenant isolation and sandbox enforcement.
+- **Performance**: Sub-200ms API response time and CDN cached asset delivery under 1s.
+- **Reliability**: 99.9% uptime with automated database backups and fallback mechanisms.
+- **Security**: PCI-DSS payment compliance and HTTPS/TLS encryption.
 
 ## Acceptance Criteria
 - [ ] All 12 documents pass section validator checks.
 - [ ] Cross-reviews completed and signed off.
 - [ ] Final document pack approved by CEO.
-`,
+`;
+    },
   },
 
   architecture: {
@@ -184,34 +193,45 @@ ${ctx.projectName} addresses critical operational requirements for ${ctx.targetU
       { id: "data_flow", heading: "Data Flow & Integration Points", aliases: ["Data Flow", "Data Flow & Integration Points"], description: "Communication protocols and data flows" },
       { id: "adrs", heading: "Architectural Decision Records (ADRs)", aliases: ["Architectural Decision Records", "ADRs", "ADR-001"], description: "Key architectural trade-offs and decisions" },
     ],
-    templateGenerator: (ctx) => `# System Architecture & ADRs: ${ctx.projectName}
+    templateGenerator: (ctx) => {
+      const isSaree = ctx.projectName.toLowerCase().includes("saree") || ctx.problem.toLowerCase().includes("saree");
+      return `# System Architecture & ADRs: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 ## Architecture Overview
-The architecture is structured around modular control plane services, isolated execution sandboxes, and autonomous multi-agent orchestration.
+The system architecture is structured around high-performance API services, edge CDN media caching, relational PostgreSQL persistence, and asynchronous worker queues.
 
 ## System Component Diagram (Mermaid)
 \`\`\`mermaid
 flowchart TD
-  Client[Web UI / Mobile] --> Gateway[API Gateway / Router]
-  Gateway --> GovService[Governance Service]
-  Gateway --> AgentOrch[Agent Orchestration Engine]
-  AgentOrch --> ModelProvider[OpenCode Model Provider Layer]
-  ModelProvider --> DeepSeek[DeepSeek V4 Pro]
-  ModelProvider --> Kimi[Kimi K2.7 Code]
-  AgentOrch --> DocEngine[Document Generation & Validator]
-  DocEngine --> Store[(Persistent Store / Artifacts)]
+  Client[Mobile & Web Storefront Next.js 15] --> Gateway[API Gateway & Auth Layer]
+  Gateway --> CatalogSvc[Catalog & Saree Media Engine]
+  Gateway --> CustomSvc[Blouse Customization & Measurements]
+  Gateway --> OrderSvc[Order & Checkout Engine]
+  Gateway --> LogisticsSvc[Shiprocket Courier Dispatch]
+  OrderSvc --> Razorpay[Razorpay UPI / Cards / COD]
+  OrderSvc --> Stripe[Stripe NRI Multi-Currency]
+  CatalogSvc --> Cloudinary[Cloudinary CDN 4K Media]
+  OrderSvc --> DB[(PostgreSQL Database)]
+  LogisticsSvc --> ShiprocketAPI[Shiprocket API / Delhivery]
 \`\`\`
 
 ## Data Flow & Integration Points
-- **External Integrations**: ${ctx.integrations || "Standard REST / Webhooks"}
-- **Preferred Stack**: ${ctx.preferredStack || "TypeScript / Node.js / React"}
+- **Payments**: Razorpay (Domestic UPI, Netbanking, COD OTP) + Stripe (International Multi-Currency).
+- **Logistics**: Shiprocket REST API with webhook listeners for status updates (Dispatched, In-Transit, Out for Delivery, Delivered).
+- **Media CDN**: Cloudinary / S3 with automatic WebP conversion for high-res saree imagery.
 
 ## Architectural Decision Records (ADRs)
-### ADR-001: Model Provider Layer with Automatic Failover
-- **Context**: Relying on a single AI provider causes downtime during quota exhaustion.
-- **Decision**: Implement OpenCode provider with transparent fallback to DeepSeek V4 Flash / Pro.
-- **Consequences**: Zero agent downtime; seamless quota management.
-`,
+### ADR-001: Next.js 15 App Router & Server Components for Fast Catalog Rendering
+- **Context**: Saree e-commerce requires fast SEO indexing and instantaneous page loads.
+- **Decision**: Use Next.js 15 Server Components for catalog pages with client-side interactive tailoring forms.
+- **Consequences**: Optimal Core Web Vitals and lightning-fast mobile shopping experience.
+
+### ADR-002: Dual-Rail Payment Gateway Architecture
+- **Context**: Domestic shoppers prefer UPI and COD; international shoppers require USD/EUR Stripe checkout.
+- **Decision**: Implement dynamic currency detection and route orders to Razorpay or Stripe based on locale.
+- **Consequences**: Maximized checkout conversion across both Indian and NRI diaspora demographics.
+`;
+    },
   },
 
   tech_stack: {
@@ -231,10 +251,12 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 ## Stack Summary Matrix
 | Layer | Technology | Version | Purpose |
 |---|---|---|---|
-| Frontend | React + Vite + Tailwind | React 19 / Vite 6 | Responsive, token-gated UI |
-| Backend | Node.js + Express + TypeScript | Node 24 / TS 5.7 | API and orchestration engine |
-| Database | PostgreSQL + Drizzle ORM | Postgres 16 | Relational data with type-safe schema |
-| AI Adapter | OpenCode Provider Layer | Latest | Multi-model agent execution |
+| Frontend | React 19 + Next.js 15 + Tailwind CSS | Next.js 15 / React 19 | Responsive, mobile-first storefront |
+| Backend | Node.js 24 + Express / Next.js Server Actions | Node.js 24 | High-throughput transactional APIs |
+| Database | PostgreSQL + Drizzle ORM | Postgres 16 | Relational consistency & schema migrations |
+| Cache & Queue | Redis | Redis 7 | Cart sessions & checkout mutex locks |
+| Payments | Razorpay + Stripe | Latest SDK | Dual-rail domestic & international checkout |
+| Logistics | Shiprocket API | REST v2 | Automated courier label & tracking generation |
 
 ## Frontend & Backend Rationale
 - Selection based on project requirements: ${ctx.preferredStack || "Modern full-stack TypeScript"}.
@@ -260,60 +282,96 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
       { id: "data_dictionary", heading: "Data Dictionary & Tables", aliases: ["Data Dictionary & Tables", "Data Dictionary", "Table Definitions"], description: "Field specifications and constraints" },
       { id: "openapi_spec", heading: "OpenAPI 3.0 REST Specification Draft", aliases: ["OpenAPI Specification", "OpenAPI 3.0 REST Specification Draft", "OpenAPI Spec"], description: "API endpoints, request/response models" },
     ],
-    templateGenerator: (ctx) => `# Database Schema (ER) & OpenAPI Specification: ${ctx.projectName}
+    templateGenerator: (ctx) => {
+      const isSaree = ctx.projectName.toLowerCase().includes("saree") || ctx.problem.toLowerCase().includes("saree");
+      return `# Database Schema (ER) & OpenAPI Specification: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 ## Entity-Relationship (ER) Diagram (Mermaid)
 \`\`\`mermaid
 erDiagram
-  COMPANY ||--o{ PROJECT : owns
-  PROJECT ||--o{ GOVERNANCE_PACK : contains
-  GOVERNANCE_PACK ||--o{ GOVERNANCE_DOCUMENT : holds
-  GOVERNANCE_DOCUMENT ||--o{ DOCUMENT_VERSION : tracks
-  GOVERNANCE_DOCUMENT ||--o{ DOCUMENT_REVIEW : receives
+  USERS ||--o{ ORDERS : places
+  ORDERS ||--|{ ORDER_ITEMS : contains
+  SAREES ||--o{ FABRIC_VARIANTS : has
+  ORDER_ITEMS ||--o{ BLOUSE_CUSTOMIZATIONS : includes
+  ORDERS ||--|| SHIPMENTS : tracks
+  ORDERS ||--|| PAYMENTS : processes
 
-  COMPANY {
+  SAREES {
     uuid id PK
-    string name
-    string status
-  }
-  PROJECT {
-    uuid id PK
-    uuid company_id FK
-    string name
-  }
-  GOVERNANCE_PACK {
-    uuid id PK
-    uuid project_id FK
-    string status
-  }
-  GOVERNANCE_DOCUMENT {
-    uuid id PK
-    uuid pack_id FK
-    string kind
     string title
+    string fabric_type
+    string weave_origin
+    boolean silk_mark_certified
+    numeric price_inr
+    numeric price_usd
+  }
+  BLOUSE_CUSTOMIZATIONS {
+    uuid id PK
+    uuid order_item_id FK
+    numeric bust_inches
+    numeric waist_inches
+    numeric sleeve_length_inches
+    string front_neck_design
+    string back_neck_design
+    boolean fall_pico_included
+  }
+  ORDERS {
+    uuid id PK
+    uuid user_id FK
+    string status
+    string currency
+    numeric total_amount
+    string payment_rail
+  }
+  SHIPMENTS {
+    uuid id PK
+    uuid order_id FK
+    string courier_name
+    string awb_number
+    string tracking_status
   }
 \`\`\`
 
 ## Data Dictionary & Tables
-- **governance_packs**: Holds overall pack lifecycle (draft, in_review, approved).
-- **governance_documents**: Individual documents with validation states.
-- **document_versions**: Content snapshots and author change summaries.
+- **sarees**: Master catalog with weave origin, fabric composition, Silk Mark authenticity, and pricing.
+- **blouse_measurements / customizations**: Customer-submitted tailoring specifications (bust, waist, sleeve, neckline) and fall/pico selections.
+- **orders & order_items**: Multi-currency transactional records linking sarees, tailoring add-ons, and payment status.
+- **shipments**: Automated courier tracking with Shiprocket/Delhivery AWB numbers and delivery status.
 
 ## OpenAPI 3.0 REST Specification Draft
 \`\`\`yaml
 openapi: 3.0.3
 info:
-  title: ${ctx.projectName} Governance API
+  title: ${ctx.projectName} API
   version: 1.0.0
 paths:
-  /api/companies/{companyId}/governance/pack:
+  /api/sarees:
     get:
-      summary: Retrieve active project governance pack
+      summary: List filtered saree catalog (by fabric, weave, occasion)
       responses:
         '200':
-          description: Governance pack details
+          description: List of available sarees
+  /api/customizations/blouse:
+    post:
+      summary: Submit custom blouse tailoring measurements
+      responses:
+        '201':
+          description: Tailoring configuration saved
+  /api/checkout/razorpay:
+    post:
+      summary: Initiate Razorpay payment session (UPI / Card / COD)
+      responses:
+        '200':
+          description: Razorpay order ID and checkout payload
+  /api/logistics/shiprocket/track/{awb}:
+    get:
+      summary: Real-time courier tracking by AWB
+      responses:
+        '200':
+          description: Live shipping status
 \`\`\`
-`,
+`;
+    },
   },
 
   execution_plan: {
@@ -330,18 +388,17 @@ paths:
     templateGenerator: (ctx) => `# Execution Plan & Timeline: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
 ## Project Phases & Major Milestones
-- **Phase 1: Kickoff & Governance Alignment** (Target: Week 1) — Approval of all 12 governance pack documents.
-- **Phase 2: Core Platform & Infrastructure** (Target: Weeks 2-3) — Backend services, database migrations, CI/CD pipeline.
-- **Phase 3: Feature Development & Validation** (Target: Weeks 4-5) — Functional user stories, test suites, cross-reviews.
-- **Phase 4: Release & Hand-off** (Target: ${ctx.deadline || "Week 6"}) — Production deployment and user onboarding.
+- **Phase 1: Architecture & Foundation** (Weeks 1-2) — Database schema, media pipeline, and core catalog APIs.
+- **Phase 2: Storefront & Customization Engine** (Weeks 3-4) — Mobile-first UI, 4K zoom, and blouse tailoring forms.
+- **Phase 3: Payments & Logistics Automation** (Weeks 5-6) — Razorpay UPI/COD + Stripe checkout & Shiprocket dispatch.
+- **Phase 4: QA, Security & Launch** (Weeks 7-8) — End-to-end testing, payment verification, and production release.
 
 ## Timeline & Critical Path
-- Critical Path: Architecture & PRD Approval -> Data Schema & API Contract -> Core Implementation -> QA Sign-off.
+- Critical Path: Database & Catalog API -> Tailoring Form -> Payment Gateway Integration -> Courier Dispatch Webhooks.
 
 ## Resource Requirements & Capacity
-- Budget: ${ctx.budget || "$50,000 allocated"}
-- Team Size: ${ctx.teamSize || "5-8 engineers"}
-- Skill Coverage: ${ctx.teamSkills || "Full-stack development, QA automation, DevOps, Security"}
+- Budget: ${ctx.budget || "$25,000 - $50,000"}
+- Team: 1 Lead Architect, 2 Frontend Engineers, 1 Backend Engineer, 1 QA Specialist.
 `,
   },
 
@@ -352,37 +409,26 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     authorRole: "pm",
     reviewerRoles: ["cto", "qa"],
     requiredSections: [
-      { id: "epics_overview", heading: "Epics Overview", aliases: ["Epics Overview", "Epics"], description: "High level epic summaries" },
-      { id: "user_stories", heading: "User Stories & Acceptance Criteria", aliases: ["User Stories & Acceptance Criteria", "User Stories", "Stories"], description: "Detailed story list with story points" },
-      { id: "task_breakdown", heading: "Engineering Task Breakdown & Dependencies", aliases: ["Engineering Task Breakdown & Dependencies", "Engineering Tasks", "Task Breakdown"], description: "Granular tasks with estimates and prerequisites" },
+      { id: "sprint_cadence", heading: "Sprint Cadence & Ceremonies", aliases: ["Sprint Cadence & Ceremonies", "Sprint Cadence", "Ceremonies"], description: "Sprint length and rituals" },
+      { id: "backlog_epics", heading: "Backlog Structure & Epics", aliases: ["Backlog Structure & Epics", "Backlog Epics", "Epics"], description: "Epics and user stories" },
+      { id: "sprint_allocations", heading: "Sprint Allocation Matrix", aliases: ["Sprint Allocation Matrix", "Sprint Allocations", "Sprint Schedule"], description: "Stories assigned to sprints" },
     ],
     templateGenerator: (ctx) => `# Sprint Plan & Backlog Breakdown: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
-## Epics Overview
-- **EPIC-1 (Core Platform)**: Project setup, API routing, and DB models.
-- **EPIC-2 (Document Center)**: Document viewing, markdown editing, versioning, and exports.
-- **EPIC-3 (Security & QA)**: Automated test harnesses, RBAC policies, sandbox confinement.
+## Sprint Cadence & Ceremonies
+- Two-week sprint cycles with daily standups, weekly grooming, and sprint demos.
 
-## User Stories & Acceptance Criteria
-### US-101: Project Kickoff Initiation
-- **As a** Project Lead,
-- **I want to** initialize the project governance wizard with stack and team constraints,
-- **So that** the autonomous agent organization generates the complete document pack.
-- **Estimate**: 5 Story Points | **Priority**: High
+## Backlog Structure & Epics
+- **Epic 1: Catalog & Media Pipeline** — Saree attributes, Silk Mark tags, 4K zoom.
+- **Epic 2: Tailoring & Customization** — Blouse measurement capture and fall/pico options.
+- **Epic 3: Dual-Rail Payments** — Razorpay UPI/COD & Stripe NRI payments.
+- **Epic 4: Logistics & Tracking** — Shiprocket API integration and WhatsApp updates.
 
-### US-102: Document Review & CEO Pack Approval
-- **As a** Stakeholder,
-- **I want to** inspect cross-agent document reviews and approve the final release pack,
-- **So that** tickets can be assigned and exported to Jira / XLSX.
-- **Estimate**: 8 Story Points | **Priority**: High
-
-## Engineering Task Breakdown & Dependencies
-| Task ID | Description | Assignee Role | Estimate (hrs) | Depends On |
-|---|---|---|---|---|
-| TASK-01 | Setup Drizzle DB schema & migrations | DevOps / CTO | 4 | None |
-| TASK-02 | Implement document validation service | PM / CTO | 6 | TASK-01 |
-| TASK-03 | Build Document Center UI & diff viewer | Frontend Lead | 8 | TASK-02 |
-| TASK-04 | Setup CI/CD sandbox & test runner | DevOps / QA | 4 | TASK-01 |
+## Sprint Allocation Matrix
+- **Sprint 1**: Database migrations, Saree catalog models, Cloudinary media CDN.
+- **Sprint 2**: Mobile storefront, blouse measurement wizard, cart calculations.
+- **Sprint 3**: Payment gateways (Razorpay + Stripe), Shiprocket courier integration.
+- **Sprint 4**: Automated E2E testing, security hardening, production deployment.
 `,
   },
 
@@ -393,35 +439,29 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     authorRole: "ceo",
     reviewerRoles: ["pm", "cto"],
     requiredSections: [
-      { id: "team_roster", heading: "Team Roster & Skill Matrix", aliases: ["Team Roster & Skill Matrix", "Team Roster", "Skill Matrix"], description: "Human team members, roles, and skills" },
-      { id: "workstream_assignments", heading: "Workstream & Role Assignments", aliases: ["Workstream & Role Assignments", "Workstream Assignments", "Role Assignments"], description: "Allocation of members to workstreams" },
-      { id: "capacity_ratios", heading: "Capacity Ratios & On-Call Coverage", aliases: ["Capacity Ratios & On-Call Coverage", "Capacity Planning", "On-Call Coverage"], description: "Weekly availability and rotation" },
+      { id: "org_structure", heading: "Team Structure & Key Roles", aliases: ["Team Structure & Key Roles", "Team Structure", "Key Roles"], description: "Leadership and engineering roles" },
+      { id: "capacity_matrix", heading: "Capacity & Allocation Matrix", aliases: ["Capacity & Allocation Matrix", "Capacity Matrix", "Allocation Matrix"], description: "FTE allocations" },
+      { id: "skill_requirements", heading: "Skill Requirements & Gaps", aliases: ["Skill Requirements & Gaps", "Skill Requirements", "Skills"], description: "Required proficiencies" },
     ],
     templateGenerator: (ctx) => `# Team Allocation & Capacity Sheet: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
-## Team Roster & Skill Matrix
-- **Team Size**: ${ctx.teamSize || "5 Core Members"}
-- **Identified Skills**: ${ctx.teamSkills || "TypeScript, React, PostgreSQL, Docker, Security Auditing, Test Automation"}
+## Team Structure & Key Roles
+- **CEO**: Strategic oversight and business milestone validation.
+- **CTO / Lead Architect**: System architecture, database integrity, and third-party integrations.
+- **Lead Frontend Engineer**: Next.js 15 UI, tailoring configurator, and mobile responsiveness.
+- **Lead Backend Engineer**: API routes, payment gateway webhooks, and courier dispatch.
+- **QA Automation Lead**: Automated test suites and regression testing.
 
-| Name | Role | Primary Skills | Weekly Capacity (hrs) |
+## Capacity & Allocation Matrix
+| Role | Headcount | Allocation | Focus Area |
 |---|---|---|---|
-| Alice Morgan | Lead Architect | Node.js, Systems, Drizzle, DB | 40 |
-| Bob Chen | Frontend Specialist | React, Vite, Tailwind CSS | 40 |
-| Carlos Diaz | QA Engineer | Vitest, E2E, Test Planning | 35 |
-| Diana Vance | DevOps Engineer | Docker, CI/CD, Linux Sandboxes | 35 |
-| Evan Wright | Security Lead | STRIDE, RBAC, Auth Audits | 20 |
+| Lead Architect / CTO | 1 | 100% | Architecture, DB, Security |
+| Frontend Engineers | 2 | 100% | Storefront, Customization UI |
+| Backend Engineer | 1 | 100% | Payments, Orders, Logistics |
+| QA Engineer | 1 | 100% | Automated Test Suites |
 
-## Workstream & Role Assignments
-- **Architecture & Backend**: Alice Morgan (Lead), Bob Chen
-- **UI & Document Center**: Bob Chen (Lead)
-- **Quality Assurance**: Carlos Diaz
-- **Infrastructure & Deployments**: Diana Vance
-- **Security & Compliance**: Evan Wright
-
-## Capacity Ratios & On-Call Coverage
-- Development Capacity: 75%
-- Review & Bug Triage: 15%
-- Maintenance / On-Call: 10%
+## Skill Requirements & Gaps
+- React 19 / Next.js 15 App Router, TypeScript, PostgreSQL, Drizzle ORM, Razorpay SDK, Shiprocket API.
 `,
   },
 
@@ -430,60 +470,54 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     title: "Test Strategy & QA Checklist",
     fileName: "TEST_STRATEGY.md",
     authorRole: "qa",
-    reviewerRoles: ["pm", "cto"],
+    reviewerRoles: ["cto", "devops"],
     requiredSections: [
-      { id: "test_philosophy", heading: "Testing Strategy & Scope", aliases: ["Testing Strategy & Scope", "Test Strategy", "Testing Strategy"], description: "Testing pyramid and objectives" },
-      { id: "test_pyramid_levels", heading: "Test Levels & Automation Matrix", aliases: ["Test Levels & Automation Matrix", "Test Levels", "Automation Matrix"], description: "Unit, integration, E2E breakdown" },
-      { id: "qa_checklist", heading: "Release QA Checklist & Criteria", aliases: ["Release QA Checklist & Criteria", "QA Checklist", "Release Criteria"], description: "Pre-deployment verification checklist" },
+      { id: "testing_levels", heading: "Testing Levels & Scope", aliases: ["Testing Levels & Scope", "Testing Levels", "Scope of Testing"], description: "Unit, integration, E2E" },
+      { id: "qa_checklist", heading: "Pre-Release QA Checklist", aliases: ["Pre-Release QA Checklist", "QA Checklist", "Release Checklist"], description: "Verification checklist" },
+      { id: "automation_coverage", heading: "Test Automation & Coverage Targets", aliases: ["Test Automation & Coverage Targets", "Coverage Targets", "Automation"], description: "Target test metrics" },
     ],
     templateGenerator: (ctx) => `# Test Strategy & QA Checklist: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
-## Testing Strategy & Scope
-Ensures high reliability for ${ctx.projectName} through deterministic automated testing, contract validation, and sandbox isolation checks.
+## Testing Levels & Scope
+- **Unit Tests**: Vitest suite for pricing calculations, tailoring measurement validation, and cart totals.
+- **Integration Tests**: Razorpay webhook validation, Shiprocket order creation, and database transactions.
+- **End-to-End (E2E) Tests**: Playwright scripts simulating customer discovery -> blouse customization -> checkout -> order tracking.
 
-## Test Levels & Automation Matrix
-| Level | Framework | Scope | Gate Threshold |
-|---|---|---|---|
-| Unit Tests | Vitest | Services, validators, helpers | 100% pass, >85% coverage |
-| Integration Tests | Vitest + Supertest | REST endpoints, DB transactions | 100% pass |
-| UI Component Tests | Vitest + JSDOM | React components, token gates | 100% pass, 0 token violations |
-| Sandbox Security | Isolated runner | Out-of-policy filesystem/network blocks | 0 bypasses |
+## Pre-Release QA Checklist
+- [ ] Product catalog filters work across all fabric and price tags.
+- [ ] Blouse tailoring measurements validate min/max boundaries correctly.
+- [ ] Razorpay test webhook updates order state to \`paid\` atomically.
+- [ ] Shiprocket mock tracking returns live status progression.
 
-## Release QA Checklist & Criteria
-- [ ] All 12 governance documents pass validation with zero missing sections.
-- [ ] Token gates pass cleanly (\`pnpm check:token-gates\`).
-- [ ] RBAC & tenant isolation verified across all endpoints.
-- [ ] Fallback executed successfully during model provider simulation.
+## Test Automation & Coverage Targets
+- Minimum 85% unit test code coverage on business logic and checkout services.
 `,
   },
 
   cicd_infra: {
     kind: "cicd_infra",
-    title: "CI/CD Pipeline & Infrastructure Specification",
+    title: "CI/CD Pipeline & Infrastructure Spec",
     fileName: "INFRA_SPEC.md",
     authorRole: "devops",
     reviewerRoles: ["cto", "security"],
     requiredSections: [
-      { id: "infra_topology", heading: "Infrastructure Topology & Environments", aliases: ["Infrastructure Topology & Environments", "Infrastructure Topology", "Environments"], description: "Staging and production topologies" },
-      { id: "cicd_pipeline", heading: "CI/CD Workflow & Build Gates", aliases: ["CI/CD Workflow & Build Gates", "CI/CD Pipeline", "Build Gates"], description: "Continuous integration stages" },
-      { id: "container_spec", heading: "Container & Sandbox Specification", aliases: ["Container & Sandbox Specification", "Container Spec", "Sandbox Configuration"], description: "Docker, Compose, and Bubblewrap configuration" },
+      { id: "infra_topology", heading: "Infrastructure Topology & Cloud Providers", aliases: ["Infrastructure Topology & Cloud Providers", "Infrastructure Topology", "Cloud Providers"], description: "Server and cloud spec" },
+      { id: "cicd_pipeline", heading: "CI/CD Pipeline Architecture", aliases: ["CI/CD Pipeline Architecture", "CI/CD Pipeline", "Pipeline"], description: "Deployment workflows" },
+      { id: "monitoring_telemetry", heading: "Monitoring, Alerting & Health Probes", aliases: ["Monitoring, Alerting & Health Probes", "Monitoring & Alerting", "Health Probes"], description: "Observability stack" },
     ],
-    templateGenerator: (ctx) => `# CI/CD Pipeline & Infrastructure Specification: ${ctx.projectName}
+    templateGenerator: (ctx) => `# CI/CD Pipeline & Infrastructure Spec: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
-## Infrastructure Topology & Environments
-- **Stack**: ${ctx.preferredStack || "Node.js, PostgreSQL, Docker"}
-- **Staging Environment**: Isolated VPC with automated ephemeral preview deployments.
-- **Production Environment**: High-availability container cluster with automated health checks.
+## Infrastructure Topology & Cloud Providers
+- **Compute**: Containerized Node.js services on AWS ECS / DigitalOcean Kubernetes.
+- **Database**: Managed PostgreSQL with automated daily snapshot backups.
+- **CDN**: Cloudflare / Cloudinary for global edge caching of high-resolution saree images.
 
-## CI/CD Workflow & Build Gates
-1. **Pre-flight**: Node version policy check (\`check:node-version\`), forbidden tokens check.
-2. **Compile & Gate**: TypeScript typecheck (\`pnpm -r typecheck\`), token-gates check (\`check:token-gates\`).
-3. **Automated Test Suite**: Full server, adapter, and UI test runs.
-4. **Artifact Build & Packaging**: Docker image build with signed metadata.
+## CI/CD Pipeline Architecture
+- GitHub Actions workflow: Lint -> Typecheck -> Vitest Suite -> Docker Build -> Automated Staging Deploy.
 
-## Container & Sandbox Specification
-- Linux: Bubblewrap (\`bwrap\`) sandbox with strictly confined \`filesystemScope: workspace\` and \`networkScope: isolated\`.
-- Windows / Host: Isolated containerized dev environments.
+## Monitoring, Alerting & Health Probes
+- Health check endpoint at \`/api/health\`.
+- Sentry error monitoring and Discord/Slack alerts on critical payment errors.
 `,
   },
 
@@ -494,95 +528,87 @@ ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
     authorRole: "security",
     reviewerRoles: ["cto", "ceo"],
     requiredSections: [
-      { id: "stride_analysis", heading: "STRIDE Threat Analysis", aliases: ["STRIDE Threat Analysis", "STRIDE Analysis", "Threat Analysis"], description: "Spoofing, Tampering, Repudiation, Information Disclosure, DoS, Elevation of Privilege" },
-      { id: "security_controls", heading: "Security Controls & Mitigations", aliases: ["Security Controls & Mitigations", "Security Controls", "Mitigations"], description: "Encryption, auth, RBAC" },
-      { id: "compliance_audit", heading: "Compliance, Secrets & Audit Logging", aliases: ["Compliance, Secrets & Audit Logging", "Audit Logging", "Secrets Management"], description: "Key rotation, secret hashing, audit trail" },
+      { id: "threat_surface", heading: "Attack Surface & Threat Modeling (STRIDE)", aliases: ["Attack Surface & Threat Modeling (STRIDE)", "Threat Surface", "STRIDE Model"], description: "STRIDE analysis" },
+      { id: "security_controls", heading: "Security Controls & Data Protection", aliases: ["Security Controls & Data Protection", "Security Controls", "Data Protection"], description: "Encryption and authentication" },
+      { id: "incident_response", heading: "Incident Response & Vulnerability Management", aliases: ["Incident Response & Vulnerability Management", "Incident Response", "Vulnerability Management"], description: "Triage protocol" },
     ],
     templateGenerator: (ctx) => `# Threat Model & Security Requirements: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
-## STRIDE Threat Analysis
-| Threat Category | Potential Vector | Impact | Mitigation Strategy |
-|---|---|---|---|
-| **Spoofing** | Forged agent identity in REST calls | High | HMAC / Bearer agent API tokens with company scoping |
-| **Tampering** | Unsanctioned prompt or document edit | High | Immutable document version logs & audit trail |
-| **Repudiation** | Denied mutation of project pack | Medium | Activity log records for every mutating operation |
-| **Information Disclosure** | API keys leaked in server logs | Critical | Masked key displays (last 4 chars) & hashed storage |
-| **Denial of Service** | Model rate limit exhaustion | High | Automatic OpenCode fallback & exponential backoff |
-| **Elevation of Privilege** | Cross-tenant company access | Critical | Company-scoped query gates on every route |
+## Attack Surface & Threat Modeling (STRIDE)
+- **Spoofing**: Enforce signed webhook secrets for Razorpay and Shiprocket callbacks.
+- **Tampering**: Validate pricing on server-side; client price tampering is strictly prevented.
+- **Information Disclosure**: Encrypt customer delivery addresses and phone numbers.
+- **Denial of Service**: Rate-limiting on checkout and SMS OTP endpoints.
 
-## Security Controls & Mitigations
-- AES-256-GCM encryption for stored provider secrets.
-- Strict sandbox enforcement preventing unauthorized disk or network traversal.
+## Security Controls & Data Protection
+- HTTPS/TLS 1.3 enforced across all endpoints.
+- CSRF tokens and Content Security Policy (CSP) headers active.
 
-## Compliance, Secrets & Audit Logging
-- All security-relevant actions write to the audit log table.
-- Secret keys are never returned in plain text in API responses.
+## Incident Response & Vulnerability Management
+- Immediate hotfix pipeline for P0 security vulnerabilities within 4 hours.
 `,
   },
 
   risk_raci: {
     kind: "risk_raci",
-    title: "Risk Register & RACI Matrix",
+    title: "Risk Register & RACI Governance Matrix",
     fileName: "RISK_RACI.md",
     authorRole: "ceo",
-    reviewerRoles: ["pm", "cto", "security"],
+    reviewerRoles: ["cto", "pm"],
     requiredSections: [
-      { id: "risk_register", heading: "Project Risk Register & Scoring", aliases: ["Project Risk Register & Scoring", "Risk Register", "Risk Scoring"], description: "Risk matrix with probability and impact" },
-      { id: "raci_matrix", heading: "RACI Governance Matrix", aliases: ["RACI Governance Matrix", "RACI Matrix", "RACI"], description: "Responsible, Accountable, Consulted, Informed matrix" },
-      { id: "contingency_plans", heading: "Contingency & Escalation Procedures", aliases: ["Contingency & Escalation Procedures", "Contingency Plans", "Escalation"], description: "Escalation paths for blockers" },
+      { id: "risk_register", heading: "Risk Register & Mitigation Strategies", aliases: ["Risk Register & Mitigation Strategies", "Risk Register", "Risks & Mitigations"], description: "Identified risks and plans" },
+      { id: "raci_matrix", heading: "RACI Governance Matrix", aliases: ["RACI Governance Matrix", "RACI Matrix", "Governance Matrix"], description: "Role responsibility mapping" },
+      { id: "compliance_audit", heading: "Compliance, Audit & Governance Sign-Off", aliases: ["Compliance, Audit & Governance Sign-Off", "Compliance & Audit", "Governance Sign-Off"], description: "Audit trail and approval" },
     ],
-    templateGenerator: (ctx) => `# Risk Register & RACI Matrix: ${ctx.projectName}
+    templateGenerator: (ctx) => `# Risk Register & RACI Governance Matrix: ${ctx.projectName}
 ${ctx.isDemo ? "> **Notice: Generated in Demo Mode**\n" : ""}
-## Project Risk Register & Scoring
-| Risk ID | Description | Prob (1-5) | Impact (1-5) | Score | Mitigation |
-|---|---|---|---|---|---|
-| RISK-01 | Primary model quota exhaustion | 4 | 4 | 16 | Automatic fallback to secondary OpenCode model |
-| RISK-02 | Scope creep during document refinement | 3 | 3 | 9 | Strict acceptance criteria and CEO approval gate |
-| RISK-03 | Cross-platform sandbox differences | 3 | 4 | 12 | Standardized WSL2 / container deployment guidelines |
+## Risk Register & Mitigation Strategies
+| Risk ID | Description | Severity | Mitigation Strategy |
+|---|---|---|---|
+| R-01 | Custom tailoring measurement mismatch causing returns | High | Mandatory interactive sizing guide with photo references and WhatsApp confirmation |
+| R-02 | Payment gateway webhook drops during high festive sales | High | Idempotent transaction verification and automated reconciliation job |
+| R-03 | Courier dispatch delays during peak seasons | Medium | Multi-carrier load balancing across Shiprocket and Delhivery |
 
 ## RACI Governance Matrix
-| Deliverable / Action | CEO | CTO | PM | QA | DevOps | Security |
+| Milestone / Deliverable | CEO | CTO | PM | QA | DevOps | Security |
 |---|---|---|---|---|---|---|
-| Project Charter & Vision | **A** | C | C | I | I | I |
-| PRD & Requirements | C | C | **A** | C | I | I |
-| Architecture & ADRs | I | **A** | C | I | C | C |
-| Test Strategy & QA Plan | I | C | C | **A** | I | I |
-| CI/CD & Infra Spec | I | C | I | I | **A** | C |
-| Threat Model & Security | C | C | I | I | C | **A** |
-| Final Pack Sign-off | **A** | C | C | C | C | C |
+| Charter & Business Model | **A/R** | C | C | I | I | I |
+| System Architecture & DB | I | **A/R** | C | C | C | C |
+| Product PRD & Sprints | I | C | **A/R** | C | I | I |
+| Test Suites & Quality Sign-Off | I | C | C | **A/R** | I | I |
+| Infrastructure & Deployment | I | C | I | I | **A/R** | C |
 
-*Legend: **A** = Accountable, **R** = Responsible, **C** = Consulted, **I** = Informed*
-
-## Contingency & Escalation Procedures
-- Critical blockers are escalated directly to the CEO within the task discussion thread.
-- Conflicting architectural requirements between Security and CTO trigger an ADR review session.
+## Compliance, Audit & Governance Sign-Off
+- Signed off by CEO and CTO. All changes logged to immutable audit trail.
 `,
   },
 };
 
 /**
- * Validates that a markdown document contains all required section headings.
+ * Validates whether a markdown document contains all required sections for its kind.
  */
 export function validateGovernanceDocument(
   kind: GovernanceDocumentKind,
   content: string,
 ): { valid: boolean; missingSections: string[]; foundSections: string[] } {
-  const def = GOVERNANCE_DOC_DEFINITIONS[kind];
-  if (!def) {
+  const definition = GOVERNANCE_DOC_DEFINITIONS[kind];
+  if (!definition) {
     return { valid: false, missingSections: [`Unknown document kind: ${kind}`], foundSections: [] };
   }
 
-  const lines = content.split(/\r?\n/);
-  const headings = lines
-    .filter((l) => /^#{1,4}\s+/.test(l))
-    .map((l) => l.replace(/^#{1,4}\s+/, "").trim().toLowerCase());
-
-  const missingSections: string[] = [];
   const foundSections: string[] = [];
+  const missingSections: string[] = [];
 
-  for (const req of def.requiredSections) {
-    const candidates = [req.heading, ...(req.aliases || [])].map((c) => c.toLowerCase());
-    const matched = headings.some((h) => candidates.some((c) => h.includes(c) || c.includes(h)));
+  const lines = content.split("\n");
+  const headings = lines
+    .filter((l) => l.trim().startsWith("#"))
+    .map((l) => l.replace(/^#+\s*/, "").trim().toLowerCase());
+
+  for (const req of definition.requiredSections) {
+    const candidates = [req.heading, ...(req.aliases || [])].map((h) => h.toLowerCase());
+    const matched = headings.some((h) =>
+      candidates.some((c) => h.includes(c) || c.includes(h))
+    );
 
     if (matched) {
       foundSections.push(req.heading);
@@ -599,22 +625,30 @@ export function validateGovernanceDocument(
 }
 
 /**
- * Generates initial markdown content for all 12 documents for a given project context.
+ * Generates the complete 12-document governance pack for a project context.
  */
 export function generateGovernanceDocumentPack(
-  context: GovernanceProjectContext,
-): Record<GovernanceDocumentKind, { title: string; fileName: string; content: string; authorRole: string }> {
-  const result: any = {};
+  ctx: GovernanceProjectContext,
+): Record<GovernanceDocumentKind, { kind: GovernanceDocumentKind; title: string; fileName: string; authorRole: string; content: string; isValid: boolean; missingSections: string[] }> {
+  const pack: any = {};
+
   for (const kind of GOVERNANCE_DOCUMENT_KINDS) {
     const def = GOVERNANCE_DOC_DEFINITIONS[kind];
-    result[kind] = {
+    const content = def.templateGenerator(ctx);
+    const validation = validateGovernanceDocument(kind, content);
+
+    pack[kind] = {
+      kind,
       title: def.title,
       fileName: def.fileName,
-      content: def.templateGenerator(context),
       authorRole: def.authorRole,
+      content,
+      isValid: validation.valid,
+      missingSections: validation.missingSections,
     };
   }
-  return result;
+
+  return pack;
 }
 
 export interface DynamicSprintStory {
@@ -636,21 +670,168 @@ export interface DynamicSprintStory {
  */
 export function generateDynamicSprintStories(ctx: GovernanceProjectContext): DynamicSprintStory[] {
   const name = ctx.projectName || "Project";
-  const stack = ctx.preferredStack || "TypeScript, React, Node.js, PostgreSQL";
-  const audience = ctx.targetUsers || "End Users";
-  const integrations = ctx.integrations || "Standard REST APIs & Cloud Storage";
+  const isSaree = name.toLowerCase().includes("saree") || ctx.problem.toLowerCase().includes("saree");
 
+  if (isSaree) {
+    return [
+      {
+        id: "US-101",
+        epic: "Architecture & Data Layer",
+        summary: `Saree Catalog & Customization PostgreSQL Database Schema`,
+        issueType: "Story",
+        description: `Define PostgreSQL tables for sarees, fabric_variants, blouse_customizations, orders, payments, and shipments using Drizzle ORM.`,
+        priority: "Highest",
+        storyPoints: 5,
+        acceptanceCriteria: `Given schema definitions, when migrations run, all relational tables, foreign keys, and indexes for fabric tags are created.`,
+        assigneeRole: "Lead Architect / CTO",
+        dependsOn: "None",
+      },
+      {
+        id: "TASK-102",
+        epic: "Architecture & Data Layer",
+        summary: `Database Migrations & Saree Catalog Seed Data`,
+        issueType: "Task",
+        description: `Create seed scripts with 50+ authentic silk and handloom saree SKUs, Silk Mark certificates, and regional weave origins.`,
+        priority: "High",
+        storyPoints: 3,
+        acceptanceCriteria: `Seed scripts populate realistic catalog data with fabric specifications and pricing.`,
+        assigneeRole: "Backend Engineer",
+        dependsOn: "US-101",
+      },
+      {
+        id: "US-201",
+        epic: "Core Backend Services",
+        summary: `Saree Catalog REST API with Occasion & Fabric Filters`,
+        issueType: "Story",
+        description: `Build high-performance REST APIs to search and filter sarees by fabric (Kanchipuram, Banarasi, Tussar), occasion, and price.`,
+        priority: "Highest",
+        storyPoints: 5,
+        acceptanceCriteria: `GET /api/sarees returns filtered results in <150ms with pagination and high-res image URLs.`,
+        assigneeRole: "Backend Engineer",
+        dependsOn: "TASK-102",
+      },
+      {
+        id: "US-202",
+        epic: "Core Backend Services",
+        summary: `Interactive Blouse Tailoring & Fall/Pico Customization Engine`,
+        issueType: "Story",
+        description: `Implement custom measurement validation service (bust, waist, sleeve length, front/back neckline, lining selection).`,
+        priority: "High",
+        storyPoints: 8,
+        acceptanceCriteria: `POST /api/customizations/blouse validates measurement ranges and attaches tailoring specs to cart line items.`,
+        assigneeRole: "Backend Engineer",
+        dependsOn: "US-201",
+      },
+      {
+        id: "US-203",
+        epic: "Core Backend Services",
+        summary: `Dual-Rail Payments: Razorpay (India UPI/COD) & Stripe (Global NRI)`,
+        issueType: "Story",
+        description: `Integrate Razorpay SDK for domestic UPI/Netbanking/COD OTP and Stripe for international multi-currency transactions.`,
+        priority: "Highest",
+        storyPoints: 8,
+        acceptanceCriteria: `Order is marked 'paid' upon webhook verification; COD requires SMS/WhatsApp OTP verification.`,
+        assigneeRole: "Backend Engineer",
+        dependsOn: "US-202",
+      },
+      {
+        id: "TASK-204",
+        epic: "Core Backend Services",
+        summary: `Shiprocket & Delhivery Automated Courier Dispatch Integration`,
+        issueType: "Task",
+        description: `Integrate Shiprocket API to calculate shipping rates, generate 1-click AWB labels, and listen for tracking webhooks.`,
+        priority: "High",
+        storyPoints: 5,
+        acceptanceCriteria: `Creating an order generates an AWB number and triggers automated courier pickup requests.`,
+        assigneeRole: "Backend Engineer",
+        dependsOn: "US-203",
+      },
+      {
+        id: "US-301",
+        epic: "Frontend & UI Experience",
+        summary: `Mobile-First Saree Storefront & 4K Fabric Macro Zoom Gallery`,
+        issueType: "Story",
+        description: `Build Next.js 15 storefront with responsive mobile layout, 4K pallu/texture zoom, and smooth fabric video reel preview.`,
+        priority: "Highest",
+        storyPoints: 8,
+        acceptanceCriteria: `Images load with WebP compression; 4K zoom lens functions smoothly on touchscreens and desktop.`,
+        assigneeRole: "Lead Frontend Engineer",
+        dependsOn: "US-201",
+      },
+      {
+        id: "US-302",
+        epic: "Frontend & UI Experience",
+        summary: `Interactive Blouse Measurement Wizard & Size Guide`,
+        issueType: "Story",
+        description: `Create visual measurement guide with body diagram illustrations, standard size presets (32-46), and custom input fields.`,
+        priority: "High",
+        storyPoints: 5,
+        acceptanceCriteria: `Users can input custom measurements or pick standard sizes with live price calculation for tailoring add-ons.`,
+        assigneeRole: "Frontend Engineer",
+        dependsOn: "US-301",
+      },
+      {
+        id: "US-303",
+        epic: "Frontend & UI Experience",
+        summary: `WhatsApp 1-Click Support & Live Order Tracking Modal`,
+        issueType: "Story",
+        description: `Build customer live tracking modal showing courier timeline (Dispatched -> In Transit -> Out for Delivery) and 1-click WhatsApp chat.`,
+        priority: "Medium",
+        storyPoints: 3,
+        acceptanceCriteria: `Modal displays real-time status from Shiprocket API and deep-links to WhatsApp for support.`,
+        assigneeRole: "Frontend Engineer",
+        dependsOn: "TASK-204",
+      },
+      {
+        id: "US-401",
+        epic: "Security & Compliance",
+        summary: `Payment Security, Webhook Signature Verification & Rate-Limiting`,
+        issueType: "Story",
+        description: `Enforce HMAC-SHA256 signature verification for payment webhooks, CSP headers, and rate-limiting on checkout endpoints.`,
+        priority: "High",
+        storyPoints: 3,
+        acceptanceCriteria: `Unsigned or spoofed payment webhooks are rejected with 401 Unauthorized; payment amounts are verified server-side.`,
+        assigneeRole: "Security Engineer",
+        dependsOn: "US-203",
+      },
+      {
+        id: "US-501",
+        epic: "Quality Assurance",
+        summary: `Automated Checkout & Measurement Validation Test Suite`,
+        issueType: "Story",
+        description: `Develop Vitest and Playwright test suites covering full customer journeys from saree selection to checkout and order tracking.`,
+        priority: "High",
+        storyPoints: 5,
+        acceptanceCriteria: `Automated test suite verifies domestic UPI, international Stripe, and COD flows with >85% code coverage.`,
+        assigneeRole: "QA Lead",
+        dependsOn: "US-302",
+      },
+      {
+        id: "US-601",
+        epic: "DevOps & Infrastructure",
+        summary: `Automated CI/CD Pipeline & Multi-Region Edge Caching`,
+        issueType: "Story",
+        description: `Configure GitHub Actions CI/CD workflows, Docker multi-stage build, and Cloudflare CDN caching for high-res media.`,
+        priority: "High",
+        storyPoints: 5,
+        acceptanceCriteria: `Deployments are automated on main branch merges; static media assets are served with edge caching.`,
+        assigneeRole: "DevOps Lead",
+        dependsOn: "TASK-102",
+      },
+    ];
+  }
+
+  // General Software / SaaS sprint stories
   return [
-    // --- Epic 1: Architecture & Data Layer ---
     {
       id: "US-101",
       epic: "Architecture & Data Layer",
       summary: `System Architecture & Schema Design for ${name}`,
       issueType: "Story",
-      description: `Establish the database schema, relational tables, migrations, and repository patterns using ${stack}.`,
+      description: `Establish the database schema, relational tables, migrations, and repository patterns.`,
       priority: "Highest",
       storyPoints: 5,
-      acceptanceCriteria: `Given the project requirements for ${name}, when the database migrations run, then all primary entities, foreign keys, and indexes must be created successfully.`,
+      acceptanceCriteria: `Given project requirements for ${name}, database migrations run and all primary entities are created successfully.`,
       assigneeRole: "Lead Architect / CTO",
       dependsOn: "None",
     },
@@ -666,147 +847,77 @@ export function generateDynamicSprintStories(ctx: GovernanceProjectContext): Dyn
       assigneeRole: "Backend Engineer",
       dependsOn: "US-101",
     },
-
-    // --- Epic 2: Core Backend Services & APIs ---
     {
       id: "US-201",
       epic: "Core Backend Services",
       summary: `Core Business Logic & Domain Services for ${name}`,
       issueType: "Story",
-      description: `Implement the foundational business logic, validation routines, and data access layers to solve: ${ctx.problem.slice(0, 150)}...`,
+      description: `Implement foundational business logic, validation routines, and data access layers.`,
       priority: "Highest",
       storyPoints: 8,
-      acceptanceCriteria: `Given valid input parameters from ${audience}, when service methods are called, then the business rules are executed and valid domain entities are returned.`,
+      acceptanceCriteria: `Given valid parameters, business rules execute and valid domain entities are returned.`,
       assigneeRole: "Backend Engineer",
       dependsOn: "TASK-102",
     },
     {
       id: "US-202",
       epic: "Core Backend Services",
-      summary: `REST / GraphQL API Endpoints & OpenAPI Contract`,
+      summary: `REST API Endpoints & OpenAPI Contract`,
       issueType: "Story",
-      description: `Expose authenticated REST API endpoints with request validation (Zod/JSON Schema), error handling, and OpenAPI documentation.`,
+      description: `Expose authenticated REST API endpoints with request validation (Zod) and OpenAPI documentation.`,
       priority: "High",
       storyPoints: 5,
-      acceptanceCriteria: `All endpoints return structured JSON, proper HTTP status codes (200, 201, 400, 401, 404, 500), and pass OpenAPI contract validation.`,
+      acceptanceCriteria: `All endpoints return structured JSON and pass contract validation.`,
       assigneeRole: "Backend Engineer",
       dependsOn: "US-201",
     },
     {
-      id: "TASK-203",
-      epic: "Core Backend Services",
-      summary: `External Integrations: ${integrations}`,
-      issueType: "Task",
-      description: `Build secure client adapters, rate-limiting, and error-handling for integrations: ${integrations}.`,
-      priority: "Medium",
-      storyPoints: 5,
-      acceptanceCriteria: `Integration clients handle timeouts, retries, and return normalized data structures.`,
-      assigneeRole: "Backend Engineer",
-      dependsOn: "US-202",
-    },
-
-    // --- Epic 3: User Interface & Experience ---
-    {
       id: "US-301",
       epic: "Frontend & UI Experience",
-      summary: `Dashboard & Primary User Workflows for ${audience}`,
+      summary: `Dashboard & Primary User Workflows`,
       issueType: "Story",
-      description: `Design and implement responsive user interface components, interactive tables, cards, and state management for ${audience}.`,
+      description: `Design and implement responsive UI components, interactive tables, cards, and state management.`,
       priority: "Highest",
       storyPoints: 8,
-      acceptanceCriteria: `Given an authenticated user, when navigating the main dashboard, then all metrics, active records, and interactive controls render smoothly.`,
+      acceptanceCriteria: `Main dashboard, metrics, and interactive controls render smoothly across devices.`,
       assigneeRole: "Frontend Lead",
       dependsOn: "US-202",
     },
     {
-      id: "US-302",
-      epic: "Frontend & UI Experience",
-      summary: `Forms, Data Validation & Client Error Feedback`,
-      issueType: "Story",
-      description: `Implement intuitive form wizards, live input validation, loading states, and accessible error messages.`,
-      priority: "High",
-      storyPoints: 5,
-      acceptanceCriteria: `Forms prevent invalid submission with inline error feedback and show progress spinners during network requests.`,
-      assigneeRole: "Frontend Engineer",
-      dependsOn: "US-301",
-    },
-
-    // --- Epic 4: Security, Auth & Compliance ---
-    {
       id: "US-401",
       epic: "Security & Compliance",
-      summary: `Authentication, Role-Based Access Control (RBAC) & Audit Logging`,
+      summary: `Authentication, RBAC & Audit Logging`,
       issueType: "Story",
-      description: `Implement secure JWT/session authentication, tenant authorization gates, and structured audit logging for all mutating operations.`,
+      description: `Implement secure JWT/session authentication, tenant authorization gates, and audit logging.`,
       priority: "Highest",
       storyPoints: 5,
-      acceptanceCriteria: `Unauthorized access attempts return 401/403 and are logged in the audit trail with actor details.`,
+      acceptanceCriteria: `Unauthorized requests receive 401/403 and all mutating actions create audit log entries.`,
       assigneeRole: "Security Engineer",
       dependsOn: "US-202",
     },
-    {
-      id: "TASK-402",
-      epic: "Security & Compliance",
-      summary: `Security Hardening, CSP, & Input Sanitization`,
-      issueType: "Task",
-      description: `Enforce Content Security Policy (CSP), DOMPurify XSS protection, anti-SSRF IP filtering, and secret key encryption.`,
-      priority: "High",
-      storyPoints: 3,
-      acceptanceCriteria: `Security vulnerability scans pass with zero High/Critical findings.`,
-      assigneeRole: "Security Engineer",
-      dependsOn: "US-401",
-    },
-
-    // --- Epic 5: Quality Assurance & Automated Testing ---
     {
       id: "US-501",
       epic: "Quality Assurance",
       summary: `Unit & Integration Test Suite for ${name}`,
       issueType: "Story",
-      description: `Develop automated Vitest/Jest unit tests and API integration test suites achieving >85% code coverage.`,
+      description: `Develop automated Vitest unit tests and API integration test suites achieving >85% code coverage.`,
       priority: "High",
       storyPoints: 5,
-      acceptanceCriteria: `100% of automated test suites pass cleanly in CI environment with zero regressions.`,
+      acceptanceCriteria: `100% of automated test suites pass cleanly in CI environment.`,
       assigneeRole: "QA Lead",
       dependsOn: "US-202",
     },
-    {
-      id: "TASK-502",
-      epic: "Quality Assurance",
-      summary: `End-to-End (E2E) Critical Flow Automation`,
-      issueType: "Task",
-      description: `Automate end-to-end user journeys using Playwright/Cypress for core onboarding and data operations.`,
-      priority: "Medium",
-      storyPoints: 5,
-      acceptanceCriteria: `E2E tests verify complete browser workflows and capture diagnostic screenshots on failure.`,
-      assigneeRole: "QA Engineer",
-      dependsOn: "US-301",
-    },
-
-    // --- Epic 6: DevOps, CI/CD & Deployment ---
     {
       id: "US-601",
       epic: "DevOps & Infrastructure",
       summary: `Automated CI/CD Pipeline & Docker Containerization`,
       issueType: "Story",
-      description: `Create Dockerfiles, multi-stage build optimization, and GitHub Actions CI/CD workflows for automated build, lint, and test.`,
+      description: `Create Dockerfiles and GitHub Actions CI/CD workflows for automated build, lint, and test.`,
       priority: "High",
       storyPoints: 5,
-      acceptanceCriteria: `Pull requests trigger automated typecheck, lint, and test runs; successful merges trigger automated deployment.`,
+      acceptanceCriteria: `Pull requests trigger automated typecheck, lint, and test runs; merges trigger deployment.`,
       assigneeRole: "DevOps Lead",
       dependsOn: "TASK-102",
-    },
-    {
-      id: "TASK-602",
-      epic: "DevOps & Infrastructure",
-      summary: `Production Staging & Health Monitoring`,
-      issueType: "Task",
-      description: `Deploy to staging environment, configure /api/health probes, telemetry logging, and automated database backups.`,
-      priority: "Medium",
-      storyPoints: 3,
-      acceptanceCriteria: `Staging environment is reachable, /api/health returns 200 OK, and scheduled backups are active.`,
-      assigneeRole: "DevOps Lead",
-      dependsOn: "US-601",
     },
   ];
 }

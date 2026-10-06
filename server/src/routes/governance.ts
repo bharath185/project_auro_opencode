@@ -33,6 +33,7 @@ import { codingAgentGovernanceService } from "../services/coding-agent-governanc
 import { logActivity } from "../services/activity-log.js";
 import {
   analyzeIdeaAndGenerateQuestions,
+  analyzeIdeaAndGenerateQuestionsAsync,
   compileCeoExecutiveBrief,
 } from "../services/ceo-consultation.js";
 import { unprocessable, notFound } from "../errors.js";
@@ -301,11 +302,16 @@ export function governanceRoutes(db: Db) {
   // 1. Real-time CEO Discovery & Consultation Questions
   const handleCeoConsult = async (req: Request, res: any) => {
     resolveCompanyId(req);
-    const { ideaPrompt } = req.body;
+    const { ideaPrompt, provider, apiKey, model, baseUrl } = req.body;
     if (!ideaPrompt || typeof ideaPrompt !== "string") {
       throw unprocessable("Project idea prompt is required");
     }
-    const analysis = analyzeIdeaAndGenerateQuestions(ideaPrompt);
+    const analysis = await analyzeIdeaAndGenerateQuestionsAsync(ideaPrompt, {
+      provider,
+      apiKey,
+      model,
+      baseUrl,
+    });
     res.json(analysis);
   };
   router.post("/companies/:companyId/governance/ceo/consult", handleCeoConsult);
