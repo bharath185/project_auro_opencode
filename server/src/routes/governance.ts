@@ -223,53 +223,12 @@ function ensureCompanyProjects(companyId: string): Map<string, ProjectRecord> {
   let projectMap = companyProjectsMap.get(companyId);
   if (!projectMap) {
     projectMap = new Map<string, ProjectRecord>();
-
-    // Seed default starter project: Sarees Selling E-Commerce Platform
-    const sareeProj = buildProjectRecord(companyId, {
-      id: "proj_saree_ecom",
-      name: "Sarees Selling E-Commerce Platform",
-      domain: "E-Commerce",
-      problem: "Online storefront for selling authentic handloom and bridal sarees with blouse tailoring customizer, video reels preview, and multi-currency checkout.",
-      targetUsers: "Ethnic fashion shoppers, bridal shoppers, international diaspora customers",
-      goals: "High-converting responsive storefront with catalog filters, custom measurements form, and automated courier tracking.",
-      preferredStack: "Next.js 15, Tailwind CSS, Node.js Fastify, PostgreSQL, Stripe & Razorpay",
-      isDemo: true,
-    });
-    projectMap.set(sareeProj.id, sareeProj);
-
-    // Seed second starter project: Enterprise Sales CRM
-    const salesProj = buildProjectRecord(companyId, {
-      id: "proj_sales_crm",
-      name: "Enterprise B2B Sales & Pipeline Tracker",
-      domain: "SaaS CRM",
-      problem: "Internal sales intelligence and lead workflow portal with multi-touch pipeline stages, automated email cadence tracking, and deal revenue forecasting.",
-      targetUsers: "Account executives, SDRs, VP of Sales",
-      goals: "Real-time deal pipeline tracking with SLA alerts and automated CRM sync.",
-      preferredStack: "React 19, Tailwind CSS, Express, PostgreSQL, Redis",
-      isDemo: true,
-    });
-    projectMap.set(salesProj.id, salesProj);
-
-    // Seed third starter project: Telehealth Patient EHR Suite
-    const telehealthProj = buildProjectRecord(companyId, {
-      id: "proj_telehealth",
-      name: "Telehealth Clinic & Patient EHR Suite",
-      domain: "Healthcare",
-      problem: "Telemedicine consultation portal with instant doctor appointment scheduling, encrypted WebRTC video calls, and HIPAA-compliant digital prescription dispatch.",
-      targetUsers: "Patients, registered physicians, clinic administrators",
-      goals: "Streamlined virtual consultation flow with secure records management.",
-      preferredStack: "Next.js 15, Tailwind CSS, FastAPI / Python, PostgreSQL, WebRTC",
-      isDemo: true,
-    });
-    projectMap.set(telehealthProj.id, telehealthProj);
-
     companyProjectsMap.set(companyId, projectMap);
-    companyActiveProjectMap.set(companyId, sareeProj.id);
   }
   return projectMap;
 }
 
-function getActiveProject(companyId: string, requestedProjectId?: string): ProjectRecord {
+function getActiveProject(companyId: string, requestedProjectId?: string): ProjectRecord | null {
   const projects = ensureCompanyProjects(companyId);
   if (requestedProjectId && projects.has(requestedProjectId)) {
     return projects.get(requestedProjectId)!;
@@ -283,7 +242,7 @@ function getActiveProject(companyId: string, requestedProjectId?: string): Proje
     companyActiveProjectMap.set(companyId, first.id);
     return first;
   }
-  throw notFound("No projects found for company");
+  return null;
 }
 
 export function governanceRoutes(db: Db) {
@@ -398,6 +357,9 @@ export function governanceRoutes(db: Db) {
     const companyId = resolveCompanyId(req);
     const projectId = req.params.projectId as string;
     const project = getActiveProject(companyId, projectId);
+    if (!project) {
+      throw notFound(`Project not found: ${projectId}`);
+    }
     res.json(project);
   };
   router.get("/companies/:companyId/governance/projects/:projectId", handleGetProject);
@@ -407,6 +369,9 @@ export function governanceRoutes(db: Db) {
     const companyId = resolveCompanyId(req);
     const projectId = req.params.projectId as string;
     const project = getActiveProject(companyId, projectId);
+    if (!project) {
+      throw notFound(`Project not found: ${projectId}`);
+    }
     companyActiveProjectMap.set(companyId, project.id);
     res.json({ success: true, activeProjectId: project.id, project });
   };
@@ -680,6 +645,17 @@ export function governanceRoutes(db: Db) {
     const projectId = (req.query.projectId as string) || (req.params.projectId as string);
     const store = getActiveProject(companyId, projectId);
 
+    if (!store) {
+      return res.json({
+        hasProject: false,
+        projectId: null,
+        projectName: "No Active Project",
+        domain: "",
+        packStatus: "draft",
+        documents: [],
+      });
+    }
+
     const docList = Object.values(store.documents).map((doc) => {
       const latestVer = doc.versions[doc.versions.length - 1];
       const validation = validateGovernanceDocument(doc.kind, latestVer.content);
@@ -698,6 +674,7 @@ export function governanceRoutes(db: Db) {
     });
 
     res.json({
+      hasProject: true,
       projectId: store.id,
       projectName: store.name,
       domain: store.domain,
@@ -714,6 +691,11 @@ export function governanceRoutes(db: Db) {
     const kind = req.params.kind as GovernanceDocumentKind;
     const projectId = req.query.projectId as string;
     const store = getActiveProject(companyId, projectId);
+
+    if (!store) {
+      throw notFound("No active project found. Please initialize a project via CEO consultation.");
+    }
+
     const doc = store.documents[kind];
 
     if (!doc) {
@@ -741,6 +723,11 @@ export function governanceRoutes(db: Db) {
     const projectId = req.query.projectId as string;
     const { content, changeSummary } = req.body;
     const store = getActiveProject(companyId, projectId);
+
+    if (!store) {
+      throw unprocessable("No active project found. Please initialize a project via CEO consultation.");
+    }
+
     const doc = store.documents[kind];
 
     if (!doc) {
@@ -803,6 +790,11 @@ export function governanceRoutes(db: Db) {
     const projectId = req.query.projectId as string;
     const { reviewerRole, status, comments } = req.body;
     const store = getActiveProject(companyId, projectId);
+
+    if (!store) {
+      throw unprocessable("No active project found. Please initialize a project via CEO consultation.");
+    }
+
     const doc = store.documents[kind];
 
     if (!doc) {
@@ -833,6 +825,10 @@ export function governanceRoutes(db: Db) {
     const companyId = resolveCompanyId(req);
     const projectId = (req.body?.projectId as string) || (req.query.projectId as string);
     const store = getActiveProject(companyId, projectId);
+
+    if (!store) {
+      throw unprocessable("No active project found. Please initialize a project via CEO consultation.");
+    }
 
     // Validate that all 12 documents are complete and valid
     const incompleteDocs: string[] = [];
@@ -888,6 +884,10 @@ export function governanceRoutes(db: Db) {
     const format = String(req.params.format || "").toLowerCase();
     const projectId = (req.query.projectId as string) || (req.params.projectId as string);
     const store = getActiveProject(companyId, projectId);
+
+    if (!store) {
+      throw unprocessable("No active project found to export. Please start a project via CEO consultation first.");
+    }
 
     const docContents: Record<string, { title: string; fileName: string; content: string }> = {};
     const zipFiles: Record<string, string> = {};

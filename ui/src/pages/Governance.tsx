@@ -22,48 +22,62 @@ import {
   CheckCircle2,
   Layers,
   FolderKanban,
-  ChevronsUpDown,
   Plus,
   ArrowRight,
+  Code2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export function Governance() {
   const { selectedCompany } = useCompany();
-  const [activeTab, setActiveTab] = useState<"projects" | "ceo" | "docs" | "team" | "org">("projects");
+  const [activeTab, setActiveTab] = useState<"ceo" | "docs" | "team" | "projects" | "org">("ceo");
   const [projects, setProjects] = useState<GovernanceProjectSummary[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string>("");
-  const [activeProjectName, setActiveProjectName] = useState<string>("Sarees Selling E-Commerce Platform");
-  const [activeProjectDomain, setActiveProjectDomain] = useState<string>("E-Commerce");
+  const [activeProjectName, setActiveProjectName] = useState<string>("");
+  const [activeProjectDomain, setActiveProjectDomain] = useState<string>("");
   const [orgStatus, setOrgStatus] = useState<GovernanceOrgStatus | null>(null);
   const [docSummary, setDocSummary] = useState<{ count: number; packStatus: string }>({
-    count: 12,
-    packStatus: "in_review",
+    count: 0,
+    packStatus: "draft",
   });
 
   const loadProjectData = async () => {
     if (!selectedCompany?.id) return;
     try {
       const projRes = await governanceApi.listProjects(selectedCompany.id);
-      setProjects(projRes.projects || []);
-      const currentActive = projRes.projects.find((p) => p.id === projRes.activeProjectId) || projRes.projects[0];
+      const projList = projRes.projects || [];
+      setProjects(projList);
+
+      const currentActive =
+        projList.find((p) => p.id === projRes.activeProjectId) ||
+        (projList.length > 0 ? projList[0] : null);
+
       if (currentActive) {
         setActiveProjectId(currentActive.id);
         setActiveProjectName(currentActive.name);
         setActiveProjectDomain(currentActive.domain);
-      }
 
-      const docRes = await governanceApi.listDocuments(selectedCompany.id, projRes.activeProjectId);
-      setDocSummary({
-        count: docRes.documents?.length || 12,
-        packStatus: docRes.packStatus || "in_review",
-      });
+        const docRes = await governanceApi.listDocuments(selectedCompany.id, currentActive.id);
+        setDocSummary({
+          count: docRes.documents?.length || 0,
+          packStatus: docRes.packStatus || "draft",
+        });
+      } else {
+        setActiveProjectId("");
+        setActiveProjectName("");
+        setActiveProjectDomain("");
+        setDocSummary({
+          count: 0,
+          packStatus: "draft",
+        });
+        setActiveTab("ceo");
+      }
 
       const statusRes = await governanceApi.getStatus(selectedCompany.id);
       setOrgStatus(statusRes);
     } catch {
-      // Handled gracefully with defaults
+      // Graceful fallback
     }
   };
 
@@ -105,6 +119,7 @@ export function Governance() {
   }
 
   const companyId = selectedCompany.id;
+  const hasActiveProject = Boolean(activeProjectId && activeProjectName);
 
   return (
     <div className="container mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -121,66 +136,86 @@ export function Governance() {
                   <h1 className="text-2xl font-bold tracking-tight text-foreground">
                     Project Auro Governance
                   </h1>
-                  <Badge variant="secondary" className="bg-primary/15 text-primary border-primary/20 text-xs font-semibold">
-                    {activeProjectName}
-                  </Badge>
-                  <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                    {activeProjectDomain}
-                  </Badge>
+                  {hasActiveProject ? (
+                    <>
+                      <Badge variant="secondary" className="bg-primary/15 text-primary border-primary/20 text-xs font-semibold">
+                        {activeProjectName}
+                      </Badge>
+                      {activeProjectDomain && (
+                        <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                          {activeProjectDomain}
+                        </Badge>
+                      )}
+                    </>
+                  ) : (
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs font-semibold">
+                      New Project Planning Mode
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Autonomous C-Suite Leadership (CEO, CTO, PM) &bull; Multi-Project Client Hub &bull; 12 Technical Specs &bull; Employee Download Packages
+                  Autonomous C-Suite Leadership (CEO, CTO, PM) &bull; Single-Project Workspace &bull; 12 Technical Specs &bull; Employee Download Packages
                 </p>
               </div>
             </div>
           </div>
 
           {/* Quick 1-Click Export Center Toolbar for Active Project */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="text-xs h-9 font-medium shadow-xs border-border hover:bg-accent"
-            >
-              <a href={governanceApi.getZipExportUrl(companyId, activeProjectId)} download>
-                <FolderArchive className="mr-1.5 h-3.5 w-3.5 text-primary" /> Download .ZIP Pack
-              </a>
-            </Button>
+          {hasActiveProject ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="text-xs h-9 font-medium shadow-xs border-border hover:bg-accent"
+              >
+                <a href={governanceApi.getZipExportUrl(companyId, activeProjectId)} download>
+                  <FolderArchive className="mr-1.5 h-3.5 w-3.5 text-primary" /> Download .ZIP Pack
+                </a>
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="text-xs h-9 font-medium shadow-xs border-border hover:bg-accent"
-            >
-              <a href={governanceApi.getJiraExportUrl(companyId, activeProjectId)} download>
-                <Layers className="mr-1.5 h-3.5 w-3.5 text-blue-500" /> Jira CSV
-              </a>
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="text-xs h-9 font-medium shadow-xs border-border hover:bg-accent"
+              >
+                <a href={governanceApi.getJiraExportUrl(companyId, activeProjectId)} download>
+                  <Layers className="mr-1.5 h-3.5 w-3.5 text-blue-500" /> Jira CSV
+                </a>
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="text-xs h-9 font-medium shadow-xs border-border hover:bg-accent"
-            >
-              <a href={governanceApi.getXlsxExportUrl(companyId, activeProjectId)} download>
-                <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Sprint XLSX
-              </a>
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="text-xs h-9 font-medium shadow-xs border-border hover:bg-accent"
+              >
+                <a href={governanceApi.getXlsxExportUrl(companyId, activeProjectId)} download>
+                  <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Sprint XLSX
+                </a>
+              </Button>
 
+              <Button
+                variant="default"
+                size="sm"
+                asChild
+                className="text-xs h-9 font-medium shadow-xs"
+              >
+                <a href={governanceApi.getMarkdownExportUrl(companyId, activeProjectId)} download>
+                  <FileText className="mr-1.5 h-3.5 w-3.5" /> All Markdown
+                </a>
+              </Button>
+            </div>
+          ) : (
             <Button
-              variant="default"
               size="sm"
-              asChild
-              className="text-xs h-9 font-medium shadow-xs"
+              onClick={() => setActiveTab("ceo")}
+              className="text-xs font-semibold shadow-xs"
             >
-              <a href={governanceApi.getMarkdownExportUrl(companyId, activeProjectId)} download>
-                <FileText className="mr-1.5 h-3.5 w-3.5" /> All Markdown
-              </a>
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Start Real Project Discovery
             </Button>
-          </div>
+          )}
         </div>
 
         {/* Executive KPI Stats Bar */}
@@ -190,10 +225,10 @@ export function Governance() {
               <FolderKanban className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-lg font-bold text-foreground leading-tight">
-                {projects.length || 3} Projects
+              <div className="text-lg font-bold text-foreground leading-tight truncate max-w-[140px]">
+                {hasActiveProject ? activeProjectName : "No Active Project"}
               </div>
-              <div className="text-[11px] text-muted-foreground font-medium">Active Portfolio</div>
+              <div className="text-[11px] text-muted-foreground font-medium">Active Workspace Scope</div>
             </div>
           </div>
 
@@ -202,7 +237,9 @@ export function Governance() {
               <BookOpen className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-lg font-bold text-foreground leading-tight">{docSummary.count} / 12</div>
+              <div className="text-lg font-bold text-foreground leading-tight">
+                {hasActiveProject ? `${docSummary.count} / 12` : "0 / 12"}
+              </div>
               <div className="text-[11px] text-muted-foreground font-medium">Technical Documents</div>
             </div>
           </div>
@@ -212,7 +249,9 @@ export function Governance() {
               <Layers className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-lg font-bold text-foreground leading-tight">13 Stories</div>
+              <div className="text-lg font-bold text-foreground leading-tight">
+                {hasActiveProject ? "13 Stories" : "0 Stories"}
+              </div>
               <div className="text-[11px] text-muted-foreground font-medium">Sprint Backlog Epics</div>
             </div>
           </div>
@@ -231,22 +270,6 @@ export function Governance() {
 
       {/* 2. Navigation Tabs */}
       <div className="flex items-center gap-1.5 p-1.5 rounded-xl border border-border bg-muted/30 max-w-full overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab("projects")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-            activeTab === "projects"
-              ? "bg-card text-foreground shadow-xs border border-border"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-          }`}
-        >
-          <FolderKanban className="h-3.5 w-3.5 text-primary" />
-          Projects Overview
-          <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.2 text-[10px] font-bold text-primary">
-            {projects.length || 3}
-          </span>
-        </button>
-
         <button
           type="button"
           onClick={() => setActiveTab("ceo")}
@@ -274,7 +297,11 @@ export function Governance() {
         >
           <BookOpen className="h-3.5 w-3.5 text-primary" />
           12 Technical Specs &amp; Developer Tasks
-          <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.2 text-[10px] font-bold text-primary">12</span>
+          {docSummary.count > 0 && (
+            <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.2 text-[10px] font-bold text-primary">
+              {docSummary.count}
+            </span>
+          )}
         </button>
 
         <button
@@ -288,6 +315,24 @@ export function Governance() {
         >
           <Users className="h-3.5 w-3.5 text-blue-500" />
           Team Allocation &amp; Sprint Tickets
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("projects")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+            activeTab === "projects"
+              ? "bg-card text-foreground shadow-xs border border-border"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+          }`}
+        >
+          <FolderKanban className="h-3.5 w-3.5 text-primary" />
+          All Client Projects
+          {projects.length > 0 && (
+            <span className="ml-1 rounded-full bg-primary/15 px-1.5 py-0.2 text-[10px] font-bold text-primary">
+              {projects.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -306,6 +351,25 @@ export function Governance() {
 
       {/* 3. Tab Content View Stage */}
       <div className="pt-1 flex justify-center">
+        {activeTab === "ceo" && (
+          <CEOInteractiveDiscovery
+            companyId={selectedCompany.id}
+            projectId={activeProjectId || undefined}
+            onPlanGenerated={handlePlanGenerated}
+          />
+        )}
+
+        {activeTab === "docs" && (
+          <DocumentCenter
+            companyId={selectedCompany.id}
+            projectId={activeProjectId || undefined}
+          />
+        )}
+
+        {activeTab === "team" && (
+          <TeamAssignmentView companyId={selectedCompany.id} />
+        )}
+
         {activeTab === "projects" && (
           <MultiProjectManager
             companyId={selectedCompany.id}
@@ -316,25 +380,6 @@ export function Governance() {
               handleSelectProject(newId, "ceo");
             }}
           />
-        )}
-
-        {activeTab === "ceo" && (
-          <CEOInteractiveDiscovery
-            companyId={selectedCompany.id}
-            projectId={activeProjectId}
-            onPlanGenerated={handlePlanGenerated}
-          />
-        )}
-
-        {activeTab === "docs" && (
-          <DocumentCenter
-            companyId={selectedCompany.id}
-            projectId={activeProjectId}
-          />
-        )}
-
-        {activeTab === "team" && (
-          <TeamAssignmentView companyId={selectedCompany.id} />
         )}
 
         {activeTab === "org" && (
